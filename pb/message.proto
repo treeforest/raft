@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+option go_package = ".;pb";
+
+service Raft {
+  // 阶段一： Leader 选举
+  rpc RequestVote(RequestVoteReq) returns (RequestVoteResp){}
+
+  // 阶段二： 日志复制
+  rpc AppendEntries(AppendEntriesReq) returns (AppendEntriesResp){}
+
+  // 心跳
+  rpc Heartbeat(HeartbeatReq) returns (HeartbeatResp) {}
+}
+
+enum NodeStateType {
+  Leader = 0;
+  Follower = 1;
+  Candidate = 2;
+}
+
+message RequestVoteReq{
+  // term 自己将要进行选举的term。在选举之前，把自己的term加1，发起选举
+  uint64 term = 1;
+  // candidateId 自己的机器的编号，意思是把选票投给自己
+  uint64 candidateId = 2;
+  // lastLogTerm 自己机器上最新一条日志的 term
+  uint64 lastLogTerm = 3;
+  // lastLogIndex 自己机器上最新一条日志的 index
+  uint64  lastLogIndex = 4;
+}
+
+message RequestVoteResp {
+  // term 接收者的 currentTerm
+  uint64 term = 1;
+  // voteGranted 选举结果:true/false,标识同意/拒绝该 Candidate
+  bool voteGranted = 2;
+}
+
+message Entry {
+  string key = 1;
+  bytes value = 2;
+}
+
+message AppendEntriesReq {
+  // term Leader的term
+  uint64 term = 1;
+  // leaderId Leader的机器编号
+  uint64 leaderId = 2;
+  // prevLogTerm 上一次复制成功的日志中最后一条的 term
+  uint64 prevLogTerm = 3;
+  // prevLogIndex 上一次复制成功的日志中最后一条的 index
+  uint64 prevLogIndex = 4;
+  // entries 当前将要复制的日志列表
+  repeated Entry entries = 5;
+  // commitIndex Leader的commitIndex的值
+  uint64 commitIndex = 6;
+}
+
+message AppendEntriesResp{
+  // term 接收者的currentTerm
+  uint64 term = 1;
+  // success true/false.如果Follower的日志包含有prevLogIndex和
+  // prevLogTerm处的日志，则返回true
+  bool success = 2;
+}
+
+message HeartbeatReq {
+
+}
+
+message HeartbeatResp {
+
+}
