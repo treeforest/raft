@@ -2,47 +2,70 @@ syntax = "proto3";
 
 option go_package = ".;pb";
 
+// gogo proto
+import "gogoproto/gogo.proto";
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
 service Raft {
-  // 阶段一： Leader 选举
-  rpc RequestVote(RequestVoteReq) returns (RequestVoteResp){}
+  // RequestVote Leader选举， 候选人收集选票
+  rpc RequestVote(RequestVoteRequest) returns (RequestVoteResponse){}
 
-  // 阶段二： 日志复制
-  rpc AppendEntries(AppendEntriesReq) returns (AppendEntriesResp){}
+  // AppendEntries 用于leader进行日志复制与心跳检测
+  rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse){}
 
-  // 心跳
-  rpc Heartbeat(HeartbeatReq) returns (HeartbeatResp) {}
+  // InstallSnapshot 快照恢复
+  // rpc InstallSnapshot(InstallSnapshotRequest) returns (InstallSnapshotResponse) {}
+  rpc Snapshot(SnapshotRequest) returns (SnapshotResponse) {}
+  rpc SnapshotRecovery(SnapshotRecoveryRequest) returns (SnapshotRecoveryResponse) {}
+
+  // Membership 成员信息
+  rpc Membership(MembershipRequest) returns (MembershipResponse){}
+
+  // Ping
+  rpc Ping(Empty) returns (Empty) {}
 }
 
-enum NodeStateType {
-  Leader = 0;
-  Follower = 1;
-  Candidate = 2;
+enum NodeState {
+  Stopped = 0;
+  Initialized = 1;
+  Leader = 2;
+  Follower = 3;
+  Candidate = 4;
+  Snapshotting = 5;
 }
 
-message RequestVoteReq{
-  // term 自己将要进行选举的term。在选举之前，把自己的term加1，发起选举
+message RequestVoteRequest{
+  // term 候选人的term。在选举之前，把自己的term加1，发起选举
   uint64 term = 1;
-  // candidateId 自己的机器的编号，意思是把选票投给自己
+  // candidateId 候选人请求把选票投给自己
   uint64 candidateId = 2;
-  // lastLogTerm 自己机器上最新一条日志的 term
+  // lastLogTerm 候选人最新一条日志的 term
   uint64 lastLogTerm = 3;
-  // lastLogIndex 自己机器上最新一条日志的 index
+  // lastLogIndex 候选人最新一条日志的 index
   uint64  lastLogIndex = 4;
 }
 
-message RequestVoteResp {
+message RequestVoteResponse {
   // term 接收者的 currentTerm
   uint64 term = 1;
   // voteGranted 选举结果:true/false,标识同意/拒绝该 Candidate
   bool voteGranted = 2;
 }
 
-message Entry {
-  string key = 1;
-  bytes value = 2;
+message LogEntry {
+  uint64 index = 1;
+  uint64 term = 2;
+  string commandName = 3;
+  bytes command = 4;
 }
 
-message AppendEntriesReq {
+message AppendEntriesRequest {
   // term Leader的term
   uint64 term = 1;
   // leaderId Leader的机器编号
@@ -51,24 +74,90 @@ message AppendEntriesReq {
   uint64 prevLogTerm = 3;
   // prevLogIndex 上一次复制成功的日志中最后一条的 index
   uint64 prevLogIndex = 4;
-  // entries 当前将要复制的日志列表
-  repeated Entry entries = 5;
   // commitIndex Leader的commitIndex的值
-  uint64 commitIndex = 6;
+  uint64 commitIndex = 5;
+  // entries 当前将要复制的日志列表
+  repeated LogEntry entries = 6 [(gogoproto.nullable) = false];
 }
 
-message AppendEntriesResp{
-  // term 接收者的currentTerm
+message AppendEntriesResponse{
+  // term 接收者的 currentTerm
   uint64 term = 1;
+  uint64 index = 2;
+  uint64 commitIndex = 3;
   // success true/false.如果Follower的日志包含有prevLogIndex和
   // prevLogTerm处的日志，则返回true
+  bool success = 4;
+}
+
+//message InstallSnapshotRequest {
+//  // term leader's term
+//  uint64 term = 1;
+//  // leaderId
+//  uint64 leaderId = 2;
+//  // lastIncludedIndex 快照中记录的最后一条日志索引
+//  uint64 lastIncludedIndex = 3;
+//  // lastIncludedTerm 快照中记录的最后任期
+//  uint64 lastIncludedTerm = 4;
+//  // offset 数据块在快照文件中的字节偏移量
+//  uint64 offset = 5;
+//  // data 追加到快照文件中的快照数据块
+//  bytes data = 6;
+//  // done 是否是最后的数据块
+//  bool done = 7;
+//}
+//
+//message InstallSnapshotResponse {
+//  // term 当前的任期
+//  uint64 term = 1;
+//}
+
+// SnapshotRequest 询问是否需要快照恢复
+message SnapshotRequest {
+  uint64 leaderId = 1;
+  uint64 lastIndex = 2;
+  uint64 lastTerm = 3;
+}
+
+message SnapshotResponse {
+  // success 如果需要快照恢复，则返回true
+  bool success = 1;
+}
+
+// SnapshotRecoveryRequest 快照恢复，leader发送给follower
+message SnapshotRecoveryRequest {
+  uint64 leaderId = 1;
+  uint64 lastIndex = 2;
+  uint64 lastTerm = 3;
+  repeated Member members = 4 [(gogoproto.nullable) = false];
+  bytes state = 5;
+}
+
+// SnapshotRecoveryResponse 由follower发送给leader
+message SnapshotRecoveryResponse {
+  uint64 term = 1;
   bool success = 2;
+  uint64 commitIndex = 3;
 }
 
-message HeartbeatReq {
-
+message Member {
+  uint64 id = 1;
+  string address = 2;
 }
 
-message HeartbeatResp {
+message MembershipRequest {
+  Member member = 1 [(gogoproto.nullable) = false];
+}
 
+message MembershipResponse {
+  repeated Member members = 1 [(gogoproto.nullable) = false];
+}
+
+message Empty {}
+
+// Snapshot 快照
+message Snapshot {
+  uint64 lastIndex = 1;
+  uint64 lastTerm = 2;
+  bytes state = 3;
 }
