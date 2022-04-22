@@ -263,6 +263,7 @@ func (m *member) dial() error {
 	cc, err := dial(m.Address, m.dialTimeout, m.dialOptions)
 	if err != nil {
 		// TODO: 移除节点
+		m.server.RemoveMember(m.Id)
 		return err
 	}
 
