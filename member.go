@@ -2,12 +2,10 @@ package raft
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 	"sync"
 	"time"
 )
@@ -25,10 +23,15 @@ type member struct {
 	stop         chan bool
 }
 
-func newMember(m pb.Member) *member {
+func newMember(m pb.Member, server *server) *member {
 	return &member{
-		Member: m,
-		cc:     nil,
+		server:       server,
+		dialTimeout:  server.config.DialTimeout,
+		dialOptions:  server.config.DialOptions,
+		Member:       m,
+		cc:           nil,
+		lastActivity: time.Time{},
+		prevLogIndex: 0,
 	}
 }
 
@@ -97,7 +100,7 @@ func (m *member) sendAppendEntriesRequest(req *pb.AppendEntriesRequest) error {
 	m.Unlock()
 
 	// 通知server处理AppendEntriesResponse
-	m.server.appendEntriesRespChan <- resp
+	m.server.leaderRespChan <- resp
 	// respCh <- resp
 	// m.server.sendAsync(resp)
 	return nil
@@ -129,7 +132,7 @@ func (m *member) sendSnapshotRequest() error {
 	snapshot := m.server.snapshot
 
 	resp, err := client.Snapshot(context.Background(), &pb.SnapshotRequest{
-		LeaderId:  m.server.Id(),
+		LeaderId:  m.server.ID(),
 		LastIndex: snapshot.LastIndex,
 		LastTerm:  snapshot.LastTerm,
 	})
@@ -154,7 +157,7 @@ func (m *member) sendSnapshotRecoveryRequest(snapshot *pb.Snapshot) error {
 	}
 
 	req := &pb.SnapshotRecoveryRequest{
-		LeaderId:  m.server.currentTerm,
+		LeaderId:  m.server.CurrentTerm(),
 		LastIndex: snapshot.LastIndex,
 		LastTerm:  snapshot.LastTerm,
 		Members:   m.server.Members(),
@@ -186,7 +189,7 @@ func (m *member) client() (pb.RaftClient, error) {
 }
 
 func (m *member) startHeartbeat() {
-	m.stop = make(chan bool)
+	m.stop = make(chan bool, 1)
 	c := make(chan bool)
 	m.setLastActivity(time.Now())
 
@@ -232,7 +235,7 @@ func (m *member) heartbeat(c chan bool) {
 func (m *member) flush() (err error) {
 	log.Debug("flush: ", m.Id)
 	prevLogIndex := m.getPrevLogIndex()
-	term := m.server.currentTerm
+	term := m.server.CurrentTerm()
 	entries, prevLogTerm := m.server.log.getEntriesAfter(prevLogIndex, m.server.config.MaxLogEntriesPerRequest)
 	if entries != nil {
 		err = m.sendAppendEntriesRequest(&pb.AppendEntriesRequest{
@@ -240,7 +243,7 @@ func (m *member) flush() (err error) {
 			PrevLogIndex: prevLogIndex,
 			PrevLogTerm:  prevLogTerm,
 			CommitIndex:  m.server.log.CommitIndex(),
-			LeaderId:     m.server.id,
+			LeaderId:     m.server.ID(),
 			Entries:      entries,
 		})
 	} else {
@@ -257,36 +260,10 @@ func (m *member) dial() error {
 		// ping failed, reconnect
 	}
 
-	var cc *grpc.ClientConn = nil
-
-	err := timeoutFunc(m.dialTimeout, func() error {
-		var err error
-		cc, err = grpc.DialContext(context.Background(), m.Address, m.dialOptions...)
-		return err
-	})
-
+	cc, err := dial(m.Address, m.dialTimeout, m.dialOptions)
 	if err != nil {
-		return fmt.Errorf("dial %s failed: %v", m.Address, err)
-	}
-
-	s := cc.GetState()
-	switch s {
-	case connectivity.Idle:
-		break
-	case connectivity.Connecting:
-		break
-	case connectivity.Ready:
-		break
-	case connectivity.TransientFailure:
-		return fmt.Errorf("transient failure")
-	case connectivity.Shutdown:
-		return fmt.Errorf("connect shutdown")
-	default:
-		return fmt.Errorf("unknown connectivity state: %d", s)
-	}
-
-	if false == ping(cc, m.dialTimeout) {
-		return errors.New("ping failed")
+		// TODO: 移除节点
+		return err
 	}
 
 	m.cc = cc

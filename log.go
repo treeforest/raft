@@ -20,7 +20,7 @@ const (
 
 // Log a log is a collection of log entries that are persisted to durable storage.
 type Log struct {
-	ApplyFunc   func(commandName string, command []byte) (interface{}, error)
+	ApplyFunc   func(commandName string, command []byte)
 	levelDB     *leveldb.DB
 	path        string
 	entries     []pb.LogEntry
@@ -31,18 +31,12 @@ type Log struct {
 	initialized bool
 }
 
-// The results of the applying a log Entry.
-type logResult struct {
-	returnValue interface{}
-	err         error
-}
-
 // newLog creates a new log.
-func newLog(path string) *Log {
+func newLog(path string, applyFunc func(string, []byte)) *Log {
 	l := &Log{
-		entries: make([]pb.LogEntry, 0),
+		ApplyFunc: applyFunc,
+		entries:   make([]pb.LogEntry, 0),
 	}
-	_ = l.open(path)
 	return l
 }
 
@@ -136,7 +130,7 @@ func (l *Log) open(path string) error {
 		// Append Entry.
 		l.entries = append(l.entries, entry)
 		if entry.Index <= l.commitIndex {
-			_, _ = l.ApplyFunc(entry.CommandName, entry.Command)
+			l.ApplyFunc(entry.CommandName, entry.Command)
 		}
 		log.Debug("append log index ", entry.Index)
 	}
@@ -294,7 +288,7 @@ func (l *Log) setCommitIndex(index uint64) error {
 		l.commitIndex = entry.Index
 
 		// Apply the changes to the state machine and store the error code.
-		_, _ = l.ApplyFunc(entry.CommandName, entry.Command)
+		l.ApplyFunc(entry.CommandName, entry.Command)
 
 		log.Debugf("index: %v, entries index: %v", i, entryIndex)
 	}
@@ -413,7 +407,7 @@ func (l *Log) writeEntry(entry *pb.LogEntry) error {
 	return nil
 }
 
-// compact 清楚index之前的日志条目，起到压缩的目的
+// compact 清除index之前的日志条目，起到压缩的目的
 func (l *Log) compact(index, term uint64) error {
 	var entries []pb.LogEntry
 

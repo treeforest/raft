@@ -3,8 +3,10 @@ package raft
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/treeforest/raft/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"math/rand"
 	"strconv"
 	"time"
@@ -32,6 +34,42 @@ func uint64ToBytes(v uint64) []byte {
 
 func bytesToUint64(b []byte) (uint64, error) {
 	return strconv.ParseUint(string(b), 10, 64)
+}
+
+func dial(address string, dialTimeout time.Duration, dialOptions []grpc.DialOption) (*grpc.ClientConn, error) {
+	var cc *grpc.ClientConn = nil
+
+	err := timeoutFunc(dialTimeout, func() error {
+		var err error
+		cc, err = grpc.DialContext(context.Background(), address, dialOptions...)
+		return err
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("dial %s failed: %v", address, err)
+	}
+
+	s := cc.GetState()
+	switch s {
+	case connectivity.Idle:
+		break
+	case connectivity.Connecting:
+		break
+	case connectivity.Ready:
+		break
+	case connectivity.TransientFailure:
+		return nil, fmt.Errorf("transient failure")
+	case connectivity.Shutdown:
+		return nil, fmt.Errorf("connect shutdown")
+	default:
+		return nil, fmt.Errorf("unknown connectivity state: %d", s)
+	}
+
+	if false == ping(cc, dialTimeout) {
+		return nil, errors.New("ping failed")
+	}
+
+	return cc, nil
 }
 
 func ping(cc *grpc.ClientConn, dialTimeout time.Duration) bool {

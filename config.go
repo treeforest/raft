@@ -1,12 +1,19 @@
 package raft
 
 import (
+	"github.com/bwmarrin/snowflake"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"time"
 )
 
 type Config struct {
+	// MemberId 节点的id
+	MemberId uint64
+
+	// Address 节点的监听地址
+	Address string
+
 	// MaxLogEntriesPerRequest 每次最多请求的日志条目
 	MaxLogEntriesPerRequest uint64
 
@@ -15,9 +22,6 @@ type Config struct {
 
 	// ElectionTimeout 选举超时
 	ElectionTimeout time.Duration
-
-	// ElectionTimeoutThresholdPercent 选举超时的阈值
-	ElectionTimeoutThresholdPercent float64
 
 	// DialTimeout 拨号超时时间
 	DialTimeout time.Duration
@@ -28,14 +32,22 @@ type Config struct {
 	// ServerOptions 服务端参数设置
 	ServerOptions []grpc.ServerOption
 
+	// SnapshotPath 快照存储路径
 	SnapshotPath string
+
+	// LogPath 日志文件路径
+	LogPath string
 }
 
 func DefaultConfig() *Config {
+	node, _ := snowflake.NewNode(time.Now().UnixNano())
 	return &Config{
-		HeartbeatInterval: time.Millisecond * 100,
-		ElectionTimeout:   time.Millisecond * 150,
-		DialTimeout:       time.Second,
+		MemberId:                uint64(node.Generate().Int64()),
+		Address:                 "localhost:4399",
+		MaxLogEntriesPerRequest: 40,
+		HeartbeatInterval:       time.Millisecond * 100,
+		ElectionTimeout:         time.Millisecond * 150,
+		DialTimeout:             time.Second,
 		DialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
@@ -43,5 +55,6 @@ func DefaultConfig() *Config {
 			grpc.Creds(insecure.NewCredentials()),
 		},
 		SnapshotPath: "./snapshot",
+		LogPath:      "./log",
 	}
 }

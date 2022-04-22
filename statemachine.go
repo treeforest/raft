@@ -6,4 +6,7 @@ type StateMachine interface {
 
 	// Recovery 从快照中恢复状态机状态
 	Recovery([]byte) error
+
+	// Apply 状态机执行命令的回调函数
+	Apply(commandName string, command []byte)
 }

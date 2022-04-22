@@ -3,71 +3,120 @@ package raft
 import (
 	"context"
 	"errors"
+	"fmt"
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft/pb"
+	"google.golang.org/grpc"
 	"io/ioutil"
+	"net"
 	"sort"
 	"sync"
 	"time"
 )
 
 var (
-	StopError      = errors.New("stopped")
-	NotLeaderError = errors.New("not leader")
+	StopError = errors.New("stopped")
 )
 
 type server struct {
 	pb.UnimplementedRaftServer
-	config          *Config
-	stateMachine    StateMachine
-	pendingSnapshot *pb.Snapshot
-	snapshot        *pb.Snapshot
-
-	// persistent state on all servers
-	// currentTerm server的当前任期
-	currentTerm uint64
-	// votedFor 在当前任期内获得选票的候选人ID(candidateId)
-	votedFor uint64
-	// log 日志
-	log *Log
-	// logs []*pb.LogEntry
-
-	// volatile state on all servers
-	// commitIndex 最后commit的日志所对应的索引，从0递增
-	commitIndex uint64
-	// lastApplied 被状态机执行的最后一条日志条目，从0递增;
-	// 当lastApplied小于commitIndex时，状态机执行小于commitIndex的日志条目
-	lastApplied uint64
-	// server id
-	id uint64
-
-	// volatile state on leader
-	// nextIndex 发送给其它server的下一条日志索引, id -> index
-	nextIndex sync.Map
-	// matchIndex 已知在其它server上复制的最新日志条目的索引， id -> index
-	matchIndex sync.Map
-
-	// 自定义变量
-	// members 集群中的成员， id -> member
-	members               sync.Map
-	startHeartbeat        chan struct{}
-	stopHeartbeat         chan struct{}
-	locker                sync.RWMutex
-	state                 pb.NodeState
-	c                     chan *ev
-	stopped               chan struct{}
-	routineGroup          sync.WaitGroup
-	leader                uint64
-	followerLoopSince     time.Time
-	followerUpdateChan    chan bool
-	appendEntriesRespChan chan *pb.AppendEntriesResponse // leader loop use
+	grpcServer            *grpc.Server                   // grpc server
+	locker                sync.RWMutex                   // 读写锁
+	config                *Config                        // 配置文件
+	stateMachine          StateMachine                   // 状态机
+	pendingSnapshot       *pb.Snapshot                   // 待存储的快照
+	snapshot              *pb.Snapshot                   // 最新快照
+	currentTerm           uint64                         // 当前的任期
+	votedFor              uint64                         // 选票投给了哪个候选人
+	log                   *Log                           // 日志对象
+	members               sync.Map                       // members in cluster
+	state                 pb.NodeState                   // 节点的当前状态,follower/candidate/leaderId/snapshotting/stopped/initialized
+	stopped               chan struct{}                  // 停止信号
+	routineGroup          sync.WaitGroup                 // 保证协程能够安全退出
+	leaderId              uint64                         // 当state为follower时，设置为leader的id
+	followerHeartbeatChan chan bool                      // follower用于更新与leader之间的心跳
+	leaderRespChan        chan *pb.AppendEntriesResponse // leaderId loop use
 }
 
-// ev 事件循环所处理的事件
-type ev struct {
-	target      interface{}
-	returnValue interface{}
-	c           chan error
+func New(config *Config, stateMachine StateMachine) Raft {
+	return &server{
+		grpcServer:            nil,
+		locker:                sync.RWMutex{},
+		config:                config,
+		stateMachine:          stateMachine,
+		pendingSnapshot:       nil,
+		snapshot:              nil,
+		currentTerm:           0,
+		votedFor:              0,
+		log:                   newLog(config.LogPath, stateMachine.Apply),
+		members:               sync.Map{},
+		stopped:               make(chan struct{}, 1),
+		routineGroup:          sync.WaitGroup{},
+		leaderId:              0,
+		followerHeartbeatChan: make(chan bool, 256),
+		leaderRespChan:        make(chan *pb.AppendEntriesResponse, 256),
+	}
+}
+
+func (s *server) Start() error {
+	if s.Running() {
+		return errors.New("server already running")
+	}
+
+	if err := s.Init(); err != nil {
+		return err
+	}
+
+	s.setState(pb.NodeState_Follower)
+
+	if s.log.currentIndex() > 0 {
+		log.Info("start from previous saved state")
+	} else {
+		log.Info("start as a new raft server")
+	}
+
+	lis, err := net.Listen("tcp", s.config.Address)
+	if err != nil {
+		log.Fatal(err)
+	}
+	s.grpcServer = grpc.NewServer(s.config.ServerOptions...)
+
+	s.routineGroup.Add(1)
+	go func() {
+		defer s.routineGroup.Done()
+		if err = s.grpcServer.Serve(lis); err != nil {
+			log.Error(err)
+		}
+	}()
+	time.Sleep(time.Millisecond * 100)
+
+	s.routineGroup.Add(1)
+	go func() {
+		defer s.routineGroup.Done()
+		s.loop()
+	}()
+
+	return nil
+}
+
+func (s *server) Init() error {
+	if s.Running() {
+		return errors.New("server already running")
+	}
+
+	if s.state == pb.NodeState_Initialized || s.log.initialized {
+		s.state = pb.NodeState_Initialized
+		return nil
+	}
+
+	if err := s.log.open(s.config.LogPath); err != nil {
+		return fmt.Errorf("open log failed: %v", err)
+	}
+
+	_, s.currentTerm = s.log.lastInfo()
+
+	s.state = pb.NodeState_Initialized
+	return nil
 }
 
 func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (
@@ -93,10 +142,44 @@ func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (
 		return
 	}
 
-	s.followerUpdateChan <- true
+	s.followerHeartbeatChan <- true
 	s.votedFor = req.CandidateId
 	resp.VoteGranted = true
 	return
+}
+
+func (s *server) Join(existing []string) {
+	if len(existing) == 0 {
+		return
+	}
+
+	req := &pb.MembershipRequest{
+		Member: pb.Member{
+			Id:      s.config.MemberId,
+			Address: s.config.Address,
+		},
+	}
+
+	for _, addr := range existing {
+		cc, err := dial(addr, s.config.DialTimeout, s.config.DialOptions)
+		if err != nil {
+			log.Errorf("dial %s failed: %v", addr, err)
+			continue
+		}
+
+		resp, err := pb.NewRaftClient(cc).Membership(context.Background(), req)
+		if err != nil {
+			log.Errorf("send membership request failed: %v", err)
+			continue
+		}
+
+		for _, m := range resp.Members {
+			if _, ok := s.members.Load(m.Id); ok {
+				continue
+			}
+			s.members.Store(m.Id, newMember(m, s))
+		}
+	}
 }
 
 // AppendEntries 用于leader进行日志复制与心跳检测
@@ -121,16 +204,16 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 		log.Warn("stale term")
 		return resp, nil
 	} else if req.Term == currentTerm {
-		if s.state == pb.NodeState_Candidate {
+		if s.State() == pb.NodeState_Candidate {
 			s.setState(pb.NodeState_Follower)
 		}
-		s.leader = req.LeaderId
+		s.leaderId = req.LeaderId
 	} else {
-		// update term and leader
+		// update term and leaderId
 		s.updateCurrentTerm(req.Term, req.LeaderId)
 	}
 
-	s.followerUpdateChan <- true
+	s.followerHeartbeatChan <- true
 
 	// 2、reply false if log doesn't contain an Entry at prevLogIndex whose
 	// term matches prevLogTerm
@@ -178,7 +261,6 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 		log.Fatal("cannot recover from previous state")
 	}
 
-	s.setCurrentTerm(req.LastTerm)
 	s.log.updateCommitIndex(req.LastIndex)
 
 	// add member
@@ -208,14 +290,15 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 		CommitIndex: s.log.CommitIndex(),
 	}
 
+	s.updateCurrentTerm(req.LastTerm, req.LeaderId)
 	return
 }
 
 // Membership 成员信息
 func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
-	*pb.MembershipResponse, error) {
+	resp *pb.MembershipResponse, err error) {
 	if value, ok := s.members.Load(req.Member.Id); !ok {
-		s.members.Store(req.Member.Id, newMember(req.Member))
+		s.members.Store(req.Member.Id, newMember(req.Member, s))
 	} else {
 		m := value.(*member)
 		if m.Address != req.Member.Address {
@@ -225,17 +308,10 @@ func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
 		}
 	}
 
-	resp := &pb.MembershipResponse{}
-	members := make([]pb.Member, 0)
+	members := s.Members()
+	members = append(members, pb.Member{Id: s.ID(), Address: s.Address()})
 
-	s.members.Range(func(key, value interface{}) bool {
-		m := value.(*member)
-		members = append(members, m.Member)
-		return true
-	})
-
-	resp.Members = members
-	return resp, nil
+	return &pb.MembershipResponse{Members: members}, nil
 }
 
 func (s *server) Stop() {
@@ -246,11 +322,38 @@ func (s *server) Stop() {
 	// 结束运行的事件循环
 	close(s.stopped)
 
+	s.grpcServer.Stop()
+
 	// 等待协程运行结束
 	s.routineGroup.Wait()
 
 	s.log.close()
 	s.setState(pb.NodeState_Stopped)
+}
+
+func (s *server) IsLeader() bool {
+	s.locker.RLock()
+	defer s.locker.RUnlock()
+	return s.state == pb.NodeState_Leader
+}
+
+func (s *server) LeaderId() uint64 {
+	s.locker.RLock()
+	defer s.locker.RUnlock()
+	return s.leaderId
+}
+
+func (s *server) LeaderAddress() string {
+	address := ""
+	s.members.Range(func(key, value interface{}) bool {
+		m := value.(*member)
+		if m.Id == s.leaderId {
+			address = m.Address
+			return false
+		}
+		return true
+	})
+	return address
 }
 
 // setCurrentTerm 设置当前任期
@@ -288,14 +391,18 @@ func (s *server) setState(state pb.NodeState) {
 	s.state = state
 }
 
-// Id 当前server的id
-func (s *server) Id() uint64 {
-	return s.id
+// ID 当前server的id
+func (s *server) ID() uint64 {
+	return s.config.MemberId
+}
+
+func (s *server) Address() string {
+	return s.config.Address
 }
 
 // updateCurrentTerm 更新任期
 func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
-	if s.state == pb.NodeState_Leader {
+	if s.State() == pb.NodeState_Leader {
 		// 如果是leader，则停止所有心跳
 		s.members.Range(func(key, value interface{}) bool {
 			m := value.(*member)
@@ -304,59 +411,17 @@ func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
 		})
 	}
 
-	if s.state != pb.NodeState_Follower {
+	if s.State() != pb.NodeState_Follower {
 		s.setState(pb.NodeState_Follower)
 	}
 
 	// 更新状态
 	s.locker.Lock()
 	s.currentTerm = term
-	s.leader = leaderId
+	s.leaderId = leaderId
 	s.votedFor = 0
 	s.locker.Unlock()
 }
-
-//func (s *server) send(value interface{}) (interface{}, error) {
-//	if !s.Running() {
-//		return nil, StopError
-//	}
-//
-//	e := &ev{target: value, c: make(chan error, 1)}
-//	select {
-//	case s.c <- e:
-//	case <-s.stopped:
-//		return nil, StopError
-//	}
-//	select {
-//	case <-s.stopped:
-//		return nil, StopError
-//	case err := <-e.c:
-//		return e.returnValue, err
-//	}
-//}
-//
-//func (s *server) sendAsync(value interface{}) {
-//	if !s.Running() {
-//		return
-//	}
-//
-//	e := &ev{target: value, c: make(chan error, 1)}
-//	select {
-//	case s.c <- e:
-//		return
-//	default:
-//		// s.c 通道阻塞，下面采用协程的方式避免阻塞的发送
-//	}
-//
-//	s.routineGroup.Add(1)
-//	go func() {
-//		defer s.routineGroup.Done()
-//		select {
-//		case s.c <- e:
-//		case <-s.stopped:
-//		}
-//	}()
-//}
 
 // loop 事件循环
 func (s *server) loop() {
@@ -378,7 +443,6 @@ func (s *server) loop() {
 }
 
 func (s *server) followerLoop() {
-	s.followerLoopSince = time.Now()
 	electionTimeout := s.config.ElectionTimeout
 	timeoutChan := afterBetween(electionTimeout, electionTimeout*2)
 	update := false
@@ -389,7 +453,8 @@ func (s *server) followerLoop() {
 		case <-s.stopped:
 			s.setState(pb.NodeState_Stopped)
 			return
-		case update = <-s.followerUpdateChan:
+		case update = <-s.followerHeartbeatChan:
+			// 收到leader的心跳消息，准备更新超时时间
 		case <-timeoutChan:
 			// 超时未收到leader的心跳消息
 			if s.log.currentIndex() > 0 {
@@ -402,16 +467,13 @@ func (s *server) followerLoop() {
 
 		if update {
 			// 在超时时间内收到了server的心跳消息，重置超时时间
-			s.locker.Lock()
-			s.followerLoopSince = time.Now()
-			s.locker.Unlock()
 			timeoutChan = afterBetween(electionTimeout, electionTimeout*2)
 		}
 	}
 }
 
 func (s *server) candidateLoop() {
-	s.leader = 0
+	s.leaderId = 0
 
 	lastLogIndex, lastLogTerm := s.log.lastInfo()
 	doVote := true
@@ -422,15 +484,15 @@ func (s *server) candidateLoop() {
 	for s.State() == pb.NodeState_Candidate {
 		if doVote {
 			// 任期加一
-			s.currentTerm++
+			s.setCurrentTerm(s.CurrentTerm() + 1)
 
 			// 自己的选票投给自己
-			s.votedFor = s.id
+			s.votedFor = s.ID()
 
 			respChan = make(chan *pb.RequestVoteResponse, s.MemberCount())
 			req := &pb.RequestVoteRequest{
 				Term:         s.CurrentTerm(),
-				CandidateId:  s.Id(),
+				CandidateId:  s.ID(),
 				LastLogTerm:  lastLogTerm,
 				LastLogIndex: lastLogIndex,
 			}
@@ -482,7 +544,7 @@ func (s *server) leaderLoop() {
 	logIndex, _ := s.log.lastInfo()
 
 	memberCount := s.MemberCount()
-	s.appendEntriesRespChan = make(chan *pb.AppendEntriesResponse, memberCount)
+	s.leaderRespChan = make(chan *pb.AppendEntriesResponse, memberCount)
 	s.members.Range(func(key, value interface{}) bool {
 		m := value.(*member)
 		m.setPrevLogIndex(logIndex)
@@ -501,7 +563,7 @@ func (s *server) leaderLoop() {
 			s.setState(pb.NodeState_Stopped)
 			return
 
-		case resp := <-s.appendEntriesRespChan:
+		case resp := <-s.leaderRespChan:
 			if resp.Term > s.CurrentTerm() {
 				s.updateCurrentTerm(resp.Term, 0)
 				break
@@ -545,7 +607,7 @@ func (s *server) snapshotLoop() {
 }
 
 func (s *server) AddMember(m *pb.Member) {
-	if s.Id() == m.Id {
+	if s.ID() == m.Id {
 		return
 	}
 
@@ -553,7 +615,7 @@ func (s *server) AddMember(m *pb.Member) {
 		return
 	}
 
-	mem := newMember(*m)
+	mem := newMember(*m, s)
 	if s.State() == pb.NodeState_Leader {
 		mem.startHeartbeat()
 	}
@@ -562,7 +624,7 @@ func (s *server) AddMember(m *pb.Member) {
 }
 
 func (s *server) RemoveMember(id uint64) {
-	if s.Id() == id {
+	if s.ID() == id {
 		return
 	}
 

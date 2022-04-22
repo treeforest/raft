@@ -1468,7 +1468,7 @@ func (this *Member) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *Member but is not nil && this == nil")
 	}
 	if this.Id != that1.Id {
-		return fmt.Errorf("Id this(%v) Not Equal that(%v)", this.Id, that1.Id)
+		return fmt.Errorf("MemberId this(%v) Not Equal that(%v)", this.Id, that1.Id)
 	}
 	if this.Address != that1.Address {
 		return fmt.Errorf("Address this(%v) Not Equal that(%v)", this.Address, that1.Address)
@@ -1922,7 +1922,7 @@ func (this *Member) GoString() string {
 	}
 	s := make([]string, 0, 6)
 	s = append(s, "&pb.Member{")
-	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
+	s = append(s, "MemberId: "+fmt.Sprintf("%#v", this.Id)+",\n")
 	s = append(s, "Address: "+fmt.Sprintf("%#v", this.Address)+",\n")
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
@@ -4395,7 +4395,7 @@ func (m *Member) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field MemberId", wireType)
 			}
 			m.Id = 0
 			for shift := uint(0); ; shift += 7 {
