@@ -7,11 +7,17 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	SET string = "set"
+	DEL string = "del"
 )
 
 type Command struct {
@@ -56,26 +62,66 @@ func (s *Server) Recovery(state []byte) error {
 
 // Apply 状态机执行命令的回调函数
 func (s *Server) Apply(commandName string, command []byte) {
-	c := s.pool.Get().(*Command)
-	_ = json.Unmarshal(command, c)
+	cmd := s.pool.Get().(*Command)
+	_ = json.Unmarshal(command, cmd)
+	log.Debugf("commandName:%s key:%s value:%s", commandName, cmd.Key, cmd.Value)
 	switch commandName {
-	case "set":
-		s.state[c.Key] = c.Value
-	case "del":
-		delete(s.state, c.Key)
+	case SET:
+		s.state[cmd.Key] = cmd.Value
+	case DEL:
+		delete(s.state, cmd.Key)
 	}
-	s.pool.Put(c)
+	s.pool.Put(cmd)
 }
 
 func (s *Server) Serve(addr string) {
 	r := gin.Default()
 	r.POST("/set", func(c *gin.Context) {
 		if !s.peer.IsLeader() {
-			c.JSON(200, gin.H{"code": -1, "leader": s.peer.LeaderAddress()})
+			c.JSON(http.StatusOK, gin.H{"code": -1, "leader": s.peer.LeaderAddress()})
+			return
 		}
-		key := c.Query("key")
-		val := c.Query("val")
 
+		cmd := s.pool.Get().(*Command)
+		cmd.Key = c.Query("key")
+		cmd.Value = c.Query("value")
+		data, _ := json.Marshal(cmd)
+
+		index, err := s.peer.Do(SET, data)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": -1, "error": err.Error()})
+			return
+		}
+
+		log.Info("index=", index)
+		c.JSON(http.StatusOK, gin.H{"code": 0})
+	})
+	r.POST("/del", func(c *gin.Context) {
+		if !s.peer.IsLeader() {
+			c.JSON(http.StatusOK, gin.H{"code": -1, "leader": s.peer.LeaderAddress()})
+			return
+		}
+
+		cmd := s.pool.Get().(*Command)
+		cmd.Key = c.Query("key")
+		data, _ := json.Marshal(cmd)
+
+		index, err := s.peer.Do(SET, data)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": -1, "error": err.Error()})
+			return
+		}
+
+		log.Info("index=", index)
+		c.JSON(http.StatusOK, gin.H{"code": 0})
+	})
+	r.GET("/get", func(c *gin.Context) {
+		key := c.Query("key")
+		if val, ok := s.state[key]; ok {
+			c.JSON(http.StatusOK, gin.H{"code": 0, "value": val})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": -1, "error": "not found"})
 	})
 
 	s.r = r
@@ -95,15 +141,19 @@ func main() {
 	config := raft.DefaultConfig()
 	config.Address = fmt.Sprintf("localhost:%d", *port)
 	config.LogPath = fmt.Sprintf("%d", *port)
+	config.URL = `http://` + *addr
 
 	peer := raft.New(raft.DefaultConfig(), s)
 	if err := peer.Start(); err != nil {
 		log.Fatal(err)
 	}
 
-	peer.Join(strings.Split(*existing, ","))
+	if *existing != "" {
+		peer.Join(strings.Split(*existing, ","))
+	}
 
 	go func() {
+		time.Sleep(time.Second)
 		s.peer = peer
 		s.Serve(*addr)
 	}()
@@ -111,7 +161,6 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, os.Kill)
 	<-done
-
-	srv.Stop()
+	peer.Stop()
 	time.Sleep(time.Millisecond * 500)
 }

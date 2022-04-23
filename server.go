@@ -16,6 +16,7 @@ import (
 
 var (
 	StopError = errors.New("stopped")
+	NotLeader = errors.New("not leader")
 )
 
 type server struct {
@@ -149,7 +150,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (
 }
 
 func (s *server) Join(existing []string) {
-	if len(existing) == 0 {
+	if existing == nil || len(existing) == 0 {
 		return
 	}
 
@@ -161,6 +162,10 @@ func (s *server) Join(existing []string) {
 	}
 
 	for _, addr := range existing {
+		if addr == "" {
+			continue
+		}
+
 		cc, err := dial(addr, s.config.DialTimeout, s.config.DialOptions)
 		if err != nil {
 			log.Errorf("dial %s failed: %v", addr, err)
@@ -179,7 +184,29 @@ func (s *server) Join(existing []string) {
 			}
 			s.members.Store(m.Id, newMember(m, s))
 		}
+
+		log.Infof("join %s success", addr)
 	}
+}
+
+func (s *server) Do(commandName string, command []byte) (uint64, error) {
+	if s.state != pb.NodeState_Leader {
+		return 0, NotLeader
+	}
+
+	entry := &pb.LogEntry{
+		Term:        s.currentTerm,
+		Index:       s.log.currentIndex() + 1,
+		CommandName: commandName,
+		Command:     command,
+	}
+
+	if err := s.log.writeEntry(entry); err != nil {
+		return 0, err
+	}
+
+	// TODO: 对 index 的提交进行监听
+	return entry.Index, nil
 }
 
 // AppendEntries 用于leader进行日志复制与心跳检测
@@ -308,10 +335,7 @@ func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
 		}
 	}
 
-	members := s.Members()
-	members = append(members, pb.Member{Id: s.ID(), Address: s.Address()})
-
-	return &pb.MembershipResponse{Members: members}, nil
+	return &pb.MembershipResponse{Members: s.Members()}, nil
 }
 
 func (s *server) Stop() {
@@ -329,6 +353,8 @@ func (s *server) Stop() {
 
 	s.log.close()
 	s.setState(pb.NodeState_Stopped)
+
+	log.Info("stopped")
 }
 
 func (s *server) IsLeader() bool {
@@ -427,7 +453,7 @@ func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
 func (s *server) loop() {
 	state := s.State()
 	for state != pb.NodeState_Stopped {
-		log.Debugf("loop, state=%s", state.String())
+		log.Infof("state: %s", state.String())
 		switch state {
 		case pb.NodeState_Follower:
 			s.followerLoop()
@@ -457,7 +483,7 @@ func (s *server) followerLoop() {
 			// 收到leader的心跳消息，准备更新超时时间
 		case <-timeoutChan:
 			// 超时未收到leader的心跳消息
-			if s.log.currentIndex() > 0 {
+			if s.log.currentIndex() > 0 || s.MemberCount() == 1 {
 				// 从follower转变成candidate
 				s.setState(pb.NodeState_Candidate)
 			} else {
@@ -552,6 +578,18 @@ func (s *server) leaderLoop() {
 		return true
 	})
 
+	// 集群中只有单一节点时的信号
+	single := make(chan struct{}, 1)
+	go func() {
+		t := time.NewTicker(time.Millisecond * 100)
+		for s.MemberCount() == 1 && s.state == pb.NodeState_Leader {
+			select {
+			case <-t.C:
+				single <- struct{}{}
+			}
+		}
+	}()
+
 	for s.State() == pb.NodeState_Leader {
 		select {
 		case <-s.stopped:
@@ -562,6 +600,9 @@ func (s *server) leaderLoop() {
 			})
 			s.setState(pb.NodeState_Stopped)
 			return
+
+		case <-single:
+			_ = s.log.setCommitIndex(s.log.currentIndex())
 
 		case resp := <-s.leaderRespChan:
 			if resp.Term > s.CurrentTerm() {
@@ -644,6 +685,7 @@ func (s *server) RemoveMember(id uint64) {
 
 func (s *server) Members() []pb.Member {
 	members := make([]pb.Member, 0)
+	members = append(members, pb.Member{Id: s.ID(), Address: s.Address()})
 	s.members.Range(func(key, value interface{}) bool {
 		members = append(members, value.(*member).Member)
 		return true
@@ -652,7 +694,7 @@ func (s *server) Members() []pb.Member {
 }
 
 func (s *server) MemberCount() int {
-	count := 0
+	count := 1 // 自身节点
 	s.members.Range(func(key, value interface{}) bool {
 		count++
 		return true

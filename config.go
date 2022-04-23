@@ -1,7 +1,7 @@
 package raft
 
 import (
-	"github.com/bwmarrin/snowflake"
+	"github.com/treeforest/snowflake"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"time"
@@ -13,6 +13,9 @@ type Config struct {
 
 	// Address 节点的监听地址
 	Address string
+
+	// URL 节点相关的url地址
+	URL string
 
 	// MaxLogEntriesPerRequest 每次最多请求的日志条目
 	MaxLogEntriesPerRequest uint64
@@ -40,9 +43,8 @@ type Config struct {
 }
 
 func DefaultConfig() *Config {
-	node, _ := snowflake.NewNode(time.Now().UnixNano())
 	return &Config{
-		MemberId:                uint64(node.Generate().Int64()),
+		MemberId:                uint64(snowflake.Generate()),
 		Address:                 "localhost:4399",
 		MaxLogEntriesPerRequest: 40,
 		HeartbeatInterval:       time.Millisecond * 100,

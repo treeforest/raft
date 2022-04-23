@@ -3,16 +3,17 @@ module github.com/treeforest/raft
 go 1.17
 
 require (
-	github.com/bwmarrin/snowflake v0.3.0
 	github.com/gin-gonic/gin v1.7.7
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/treeforest/logger v0.1.0
+	github.com/treeforest/snowflake v0.0.0-20220423010955-6c66c048ca13
 	google.golang.org/grpc v1.45.0
 )
 
 require (
+	github.com/bwmarrin/snowflake v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect

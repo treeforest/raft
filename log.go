@@ -133,6 +133,7 @@ func (l *Log) open(path string) error {
 			l.ApplyFunc(entry.CommandName, entry.Command)
 		}
 		log.Debug("append log index ", entry.Index)
+		index++
 	}
 
 	log.Debug("recovery number of log ", len(l.entries))
@@ -286,6 +287,7 @@ func (l *Log) setCommitIndex(index uint64) error {
 
 		// Update commit index.
 		l.commitIndex = entry.Index
+		l.flushCommitIndex()
 
 		// Apply the changes to the state machine and store the error code.
 		l.ApplyFunc(entry.CommandName, entry.Command)
