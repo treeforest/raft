@@ -7,6 +7,7 @@ import (
 	"github.com/treeforest/raft/pb"
 	"google.golang.org/grpc"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,6 +22,7 @@ type member struct {
 	lastActivity time.Time
 	prevLogIndex uint64
 	stop         chan bool
+	state        int32 // 0:running, 1:stopping, 2:state
 }
 
 func newMember(m pb.Member, server *server) *member {
@@ -32,6 +34,7 @@ func newMember(m pb.Member, server *server) *member {
 		cc:           nil,
 		lastActivity: time.Time{},
 		prevLogIndex: 0,
+		state:        0,
 	}
 }
 
@@ -101,8 +104,7 @@ func (m *member) sendAppendEntriesRequest(req *pb.AppendEntriesRequest) error {
 
 	// 通知server处理AppendEntriesResponse
 	m.server.leaderRespChan <- resp
-	// respCh <- resp
-	// m.server.sendAsync(resp)
+
 	return nil
 }
 
@@ -179,34 +181,41 @@ func (m *member) sendSnapshotRecoveryRequest(snapshot *pb.Snapshot) error {
 	return nil
 }
 
+func (m *member) sendMembershipRequest(req *pb.MembershipRequest) (*pb.MembershipResponse, error) {
+	client, err := m.client()
+	if err != nil {
+		return nil, err
+	}
+
+	var resp *pb.MembershipResponse
+	err = timeoutFunc(m.dialTimeout, func() error {
+		resp, err = client.Membership(context.Background(), req)
+		return err
+	})
+
+	return resp, err
+}
+
 func (m *member) client() (pb.RaftClient, error) {
-	if m.cc == nil {
+	if m.getCC() == nil {
 		if err := m.dial(); err != nil {
 			return nil, fmt.Errorf("dial failed: %v", err)
 		}
 	}
-	return pb.NewRaftClient(m.cc), nil
+	return pb.NewRaftClient(m.getCC()), nil
 }
 
 func (m *member) startHeartbeat() {
 	m.stop = make(chan bool, 1)
-	c := make(chan bool)
-	m.setLastActivity(time.Now())
-
-	go func() {
-		m.heartbeat(c)
-	}()
-	<-c
+	go m.heartbeat()
 }
 
 func (m *member) stopHeartbeat(flush bool) {
-	m.setLastActivity(time.Time{})
 	m.stop <- flush
 }
 
-func (m *member) heartbeat(c chan bool) {
+func (m *member) heartbeat() {
 	stop := m.stop
-	c <- true
 
 	ticker := time.NewTicker(m.server.config.HeartbeatInterval)
 	log.Debugf("peer.heartbeat: ", m.Id, m.server.config.HeartbeatInterval)
@@ -220,14 +229,38 @@ func (m *member) heartbeat(c chan bool) {
 			} else {
 				log.Debug("stop heartbeat")
 			}
+			log.Infof("stop heartbeat with %d", m.Id)
+			atomic.SwapInt32(&m.state, 2)
 			return
 		case <-ticker.C:
-			//start := time.Now()
-			if err := m.flush(); err != nil {
-				// 心跳失败
-				log.Warnf("flush failed: %d", m.Id)
+			if atomic.LoadInt32(&m.state) != 0 {
+				break
 			}
-			//duration := time.Now().Sub(start)
+			if err := m.flush(); err != nil {
+				log.Warnf("flush failed: %d", m.Id)
+
+				// 暂停心跳
+				ticker.Stop()
+
+				// 心跳失败, 尝试重连3次
+				var i = 0
+				for i < 3 {
+					if err = m.dial(); err == nil {
+						break
+					}
+					i++
+				}
+				if i == 3 {
+					// 移除节点,不需要return，在RemoveMember方法里会向stop通道传值
+					m.setCC(nil)
+					m.server.RemoveMember(m.Id)
+					atomic.SwapInt32(&m.state, 1)
+					break
+				}
+
+				// 恢复心跳
+				ticker.Reset(m.server.config.HeartbeatInterval)
+			}
 		}
 	}
 }
@@ -252,9 +285,22 @@ func (m *member) flush() (err error) {
 	return
 }
 
+func (m *member) getCC() *grpc.ClientConn {
+	m.RLock()
+	defer m.RUnlock()
+	return m.cc
+}
+
+func (m *member) setCC(cc *grpc.ClientConn) {
+	m.Lock()
+	defer m.Unlock()
+	m.cc = cc
+}
+
 func (m *member) dial() error {
-	if m.cc != nil {
-		if ping(m.cc, m.dialTimeout) {
+	cc := m.getCC()
+	if cc != nil {
+		if ping(cc, m.dialTimeout) == true {
 			return nil
 		}
 		// ping failed, reconnect
@@ -262,11 +308,11 @@ func (m *member) dial() error {
 
 	cc, err := dial(m.Address, m.dialTimeout, m.dialOptions)
 	if err != nil {
-		// TODO: 移除节点
-		m.server.RemoveMember(m.Id)
 		return err
 	}
 
-	m.cc = cc
+	log.Infof("dial %s success", m.Address)
+
+	m.setCC(cc)
 	return nil
 }

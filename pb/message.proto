@@ -19,15 +19,16 @@ service Raft {
   // AppendEntries 用于leader进行日志复制与心跳检测
   rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse){}
 
-  // InstallSnapshot 快照恢复
-  // rpc InstallSnapshot(InstallSnapshotRequest) returns (InstallSnapshotResponse) {}
+  // Snapshot leader询问follower是否需要快照恢复
   rpc Snapshot(SnapshotRequest) returns (SnapshotResponse) {}
+
+  // SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
   rpc SnapshotRecovery(SnapshotRecoveryRequest) returns (SnapshotRecoveryResponse) {}
 
   // Membership 成员信息
   rpc Membership(MembershipRequest) returns (MembershipResponse){}
 
-  // Ping
+  // Ping 探测节点状态
   rpc Ping(Empty) returns (Empty) {}
 }
 

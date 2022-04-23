@@ -23,7 +23,10 @@ type Config struct {
 	// HeartbeatInterval 探测节点状态的间隔
 	HeartbeatInterval time.Duration
 
-	// ElectionTimeout 选举超时
+	// HeartbeatTimeout 心跳超时时间
+	HeartbeatTimeout time.Duration
+
+	// ElectionTimeout 选举超时(T~2T)
 	ElectionTimeout time.Duration
 
 	// DialTimeout 拨号超时时间
@@ -40,6 +43,9 @@ type Config struct {
 
 	// LogPath 日志文件路径
 	LogPath string
+
+	// PullMembershipInterval 同步成员信息的间隔时间
+	PullMembershipInterval time.Duration
 }
 
 func DefaultConfig() *Config {
@@ -47,16 +53,18 @@ func DefaultConfig() *Config {
 		MemberId:                uint64(snowflake.Generate()),
 		Address:                 "localhost:4399",
 		MaxLogEntriesPerRequest: 40,
-		HeartbeatInterval:       time.Millisecond * 100,
-		ElectionTimeout:         time.Millisecond * 150,
-		DialTimeout:             time.Second,
+		HeartbeatInterval:       time.Millisecond * 200,
+		HeartbeatTimeout:        time.Millisecond * 300,
+		ElectionTimeout:         time.Millisecond * 250,
+		DialTimeout:             time.Millisecond * 300,
 		DialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
 		ServerOptions: []grpc.ServerOption{
 			grpc.Creds(insecure.NewCredentials()),
 		},
-		SnapshotPath: "./snapshot",
-		LogPath:      "./log",
+		SnapshotPath:           "./snapshot",
+		LogPath:                "./log",
+		PullMembershipInterval: time.Second,
 	}
 }

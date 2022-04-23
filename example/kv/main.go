@@ -137,13 +137,21 @@ func main() {
 	flag.Parse()
 
 	s := New()
+	log.SetLevel(log.INFO)
 
 	config := raft.DefaultConfig()
-	config.Address = fmt.Sprintf("localhost:%d", *port)
+	config.Address = fmt.Sprintf("0.0.0.0:%d", *port)
 	config.LogPath = fmt.Sprintf("%d", *port)
 	config.URL = `http://` + *addr
 
-	peer := raft.New(raft.DefaultConfig(), s)
+	peer := raft.New(config, s)
+
+	go func() {
+		s.peer = peer
+		s.Serve(*addr)
+	}()
+	time.Sleep(time.Millisecond * 50)
+
 	if err := peer.Start(); err != nil {
 		log.Fatal(err)
 	}
@@ -151,12 +159,6 @@ func main() {
 	if *existing != "" {
 		peer.Join(strings.Split(*existing, ","))
 	}
-
-	go func() {
-		time.Sleep(time.Second)
-		s.peer = peer
-		s.Serve(*addr)
-	}()
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, os.Kill)

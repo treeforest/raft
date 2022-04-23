@@ -16,6 +16,7 @@ const (
 	startIndexKey  = "__start_index_key__"
 	startTermKey   = "__start_term_key__"
 	lastEntryIndex = "__last_entry_key__"
+	currentTermKey = "__latest_term_key__"
 )
 
 // Log a log is a collection of log entries that are persisted to durable storage.
@@ -28,6 +29,7 @@ type Log struct {
 	mutex       sync.RWMutex
 	startIndex  uint64 // the index before the first Entry in the Log entries
 	startTerm   uint64
+	currentTerm uint64
 	initialized bool
 }
 
@@ -47,8 +49,8 @@ func (l *Log) CommitIndex() uint64 {
 	return l.commitIndex
 }
 
-// currentIndex the current index in the log.
-func (l *Log) currentIndex() uint64 {
+// CurrentIndex the current index in the log.
+func (l *Log) CurrentIndex() uint64 {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 	return l.internalCurrentIndex()
@@ -64,7 +66,7 @@ func (l *Log) internalCurrentIndex() uint64 {
 
 // nextIndex the next index in the log.
 func (l *Log) nextIndex() uint64 {
-	return l.currentIndex() + 1
+	return l.CurrentIndex() + 1
 }
 
 // isEmpty determines if the log contains zero entries.
@@ -74,15 +76,31 @@ func (l *Log) isEmpty() bool {
 	return (len(l.entries) == 0) && (l.startIndex == 0)
 }
 
-// currentTerm the current term in the log.
-func (l *Log) currentTerm() uint64 {
+func (l *Log) nextTerm() uint64 {
+	return l.CurrentTerm() + 1
+}
+
+func (l *Log) CurrentTerm() uint64 {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
+	return l.currentTerm
+}
 
-	if len(l.entries) == 0 {
-		return l.startTerm
+func (l *Log) SetCurrentTerm(term uint64) {
+	err := l.levelDB.Put([]byte(currentTermKey), uint64ToBytes(term), nil)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return l.entries[len(l.entries)-1].Term
+
+	l.mutex.Lock()
+	l.currentTerm = term
+	l.mutex.Unlock()
+}
+
+func (l *Log) SetNextTerm() uint64 {
+	term := l.nextTerm()
+	l.SetCurrentTerm(term)
+	return term
 }
 
 // open it opens the log levelDB and reads existing entries. The log can remain open and
@@ -108,6 +126,10 @@ func (l *Log) open(path string) error {
 	l.commitIndex, err = l.getUint64Value(commitIndexKey)
 	if err != nil {
 		log.Fatal("get commitIndex failed: ", err)
+	}
+	l.currentTerm, err = l.getUint64Value(currentTermKey)
+	if err != nil {
+		log.Fatal("get currentTerm failed: ", err)
 	}
 
 	index, end := l.startIndex+1, l.commitIndex
@@ -358,6 +380,7 @@ func (l *Log) appendEntries(entries []pb.LogEntry) error {
 		if err = l.writeEntry(&entry); err != nil {
 			return err
 		}
+		log.Infof("append entry, term:%d index:%d", entry.Term, entry.Index)
 	}
 
 	if err != nil {

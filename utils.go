@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -73,12 +74,12 @@ func dial(address string, dialTimeout time.Duration, dialOptions []grpc.DialOpti
 }
 
 func ping(cc *grpc.ClientConn, dialTimeout time.Duration) bool {
-	var err error
-	_ = timeoutFunc(dialTimeout, func() error {
-		_, err = pb.NewRaftClient(cc).Ping(context.Background(), &pb.Empty{})
+	err := timeoutFunc(dialTimeout, func() error {
+		_, err := pb.NewRaftClient(cc).Ping(context.Background(), &pb.Empty{})
 		return err
 	})
 	if err != nil {
+		log.Debugf("ping error:%v", err)
 		return false
 	}
 	return true

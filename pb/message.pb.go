@@ -1468,7 +1468,7 @@ func (this *Member) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *Member but is not nil && this == nil")
 	}
 	if this.Id != that1.Id {
-		return fmt.Errorf("MemberId this(%v) Not Equal that(%v)", this.Id, that1.Id)
+		return fmt.Errorf("Id this(%v) Not Equal that(%v)", this.Id, that1.Id)
 	}
 	if this.Address != that1.Address {
 		return fmt.Errorf("Address this(%v) Not Equal that(%v)", this.Address, that1.Address)
@@ -1922,7 +1922,7 @@ func (this *Member) GoString() string {
 	}
 	s := make([]string, 0, 6)
 	s = append(s, "&pb.Member{")
-	s = append(s, "MemberId: "+fmt.Sprintf("%#v", this.Id)+",\n")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.Id)+",\n")
 	s = append(s, "Address: "+fmt.Sprintf("%#v", this.Address)+",\n")
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
@@ -2014,13 +2014,13 @@ type RaftClient interface {
 	RequestVote(ctx context.Context, in *RequestVoteRequest, opts ...grpc.CallOption) (*RequestVoteResponse, error)
 	// AppendEntries 用于leader进行日志复制与心跳检测
 	AppendEntries(ctx context.Context, in *AppendEntriesRequest, opts ...grpc.CallOption) (*AppendEntriesResponse, error)
-	// InstallSnapshot 快照恢复
-	// rpc InstallSnapshot(InstallSnapshotRequest) returns (InstallSnapshotResponse) {}
+	// Snapshot leader询问follower是否需要快照恢复
 	Snapshot(ctx context.Context, in *SnapshotRequest, opts ...grpc.CallOption) (*SnapshotResponse, error)
+	// SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
 	SnapshotRecovery(ctx context.Context, in *SnapshotRecoveryRequest, opts ...grpc.CallOption) (*SnapshotRecoveryResponse, error)
 	// Membership 成员信息
 	Membership(ctx context.Context, in *MembershipRequest, opts ...grpc.CallOption) (*MembershipResponse, error)
-	// Ping
+	// Ping 探测节点状态
 	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
 
@@ -2092,13 +2092,13 @@ type RaftServer interface {
 	RequestVote(context.Context, *RequestVoteRequest) (*RequestVoteResponse, error)
 	// AppendEntries 用于leader进行日志复制与心跳检测
 	AppendEntries(context.Context, *AppendEntriesRequest) (*AppendEntriesResponse, error)
-	// InstallSnapshot 快照恢复
-	// rpc InstallSnapshot(InstallSnapshotRequest) returns (InstallSnapshotResponse) {}
+	// Snapshot leader询问follower是否需要快照恢复
 	Snapshot(context.Context, *SnapshotRequest) (*SnapshotResponse, error)
+	// SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
 	SnapshotRecovery(context.Context, *SnapshotRecoveryRequest) (*SnapshotRecoveryResponse, error)
 	// Membership 成员信息
 	Membership(context.Context, *MembershipRequest) (*MembershipResponse, error)
-	// Ping
+	// Ping 探测节点状态
 	Ping(context.Context, *Empty) (*Empty, error)
 }
 
@@ -4395,7 +4395,7 @@ func (m *Member) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MemberId", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
 			}
 			m.Id = 0
 			for shift := uint(0); ; shift += 7 {

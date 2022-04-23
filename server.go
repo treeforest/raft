@@ -11,27 +11,26 @@ import (
 	"net"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 var (
-	StopError = errors.New("stopped")
+	StopError = errors.New("state")
 	NotLeader = errors.New("not leader")
 )
 
 type server struct {
-	pb.UnimplementedRaftServer
 	grpcServer            *grpc.Server                   // grpc server
 	locker                sync.RWMutex                   // 读写锁
 	config                *Config                        // 配置文件
 	stateMachine          StateMachine                   // 状态机
 	pendingSnapshot       *pb.Snapshot                   // 待存储的快照
 	snapshot              *pb.Snapshot                   // 最新快照
-	currentTerm           uint64                         // 当前的任期
 	votedFor              uint64                         // 选票投给了哪个候选人
 	log                   *Log                           // 日志对象
 	members               sync.Map                       // members in cluster
-	state                 pb.NodeState                   // 节点的当前状态,follower/candidate/leaderId/snapshotting/stopped/initialized
+	state                 pb.NodeState                   // 节点的当前状态,follower/candidate/leaderId/snapshotting/state/initialized
 	stopped               chan struct{}                  // 停止信号
 	routineGroup          sync.WaitGroup                 // 保证协程能够安全退出
 	leaderId              uint64                         // 当state为follower时，设置为leader的id
@@ -47,7 +46,6 @@ func New(config *Config, stateMachine StateMachine) Raft {
 		stateMachine:          stateMachine,
 		pendingSnapshot:       nil,
 		snapshot:              nil,
-		currentTerm:           0,
 		votedFor:              0,
 		log:                   newLog(config.LogPath, stateMachine.Apply),
 		members:               sync.Map{},
@@ -70,7 +68,7 @@ func (s *server) Start() error {
 
 	s.setState(pb.NodeState_Follower)
 
-	if s.log.currentIndex() > 0 {
+	if s.log.CurrentIndex() > 0 {
 		log.Info("start from previous saved state")
 	} else {
 		log.Info("start as a new raft server")
@@ -80,21 +78,30 @@ func (s *server) Start() error {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	s.grpcServer = grpc.NewServer(s.config.ServerOptions...)
+	pb.RegisterRaftServer(s.grpcServer, s)
 
 	s.routineGroup.Add(1)
 	go func() {
 		defer s.routineGroup.Done()
+		log.Infof("grpc server running at %s", s.config.Address)
 		if err = s.grpcServer.Serve(lis); err != nil {
 			log.Error(err)
 		}
 	}()
-	time.Sleep(time.Millisecond * 100)
+	time.Sleep(time.Millisecond * 50)
 
 	s.routineGroup.Add(1)
 	go func() {
 		defer s.routineGroup.Done()
 		s.loop()
+	}()
+
+	s.routineGroup.Add(1)
+	go func() {
+		defer s.routineGroup.Done()
+		s.pullMembershipTrigger()
 	}()
 
 	return nil
@@ -114,8 +121,6 @@ func (s *server) Init() error {
 		return fmt.Errorf("open log failed: %v", err)
 	}
 
-	_, s.currentTerm = s.log.lastInfo()
-
 	s.state = pb.NodeState_Initialized
 	return nil
 }
@@ -134,7 +139,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (
 
 	if req.Term > currentTerm {
 		s.updateCurrentTerm(req.Term, 0)
-	} else if s.votedFor != 0 && s.votedFor != req.CandidateId {
+	} else if atomic.LoadUint64(&s.votedFor) != 0 && atomic.LoadUint64(&s.votedFor) != req.CandidateId {
 		return
 	}
 
@@ -143,8 +148,8 @@ func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (
 		return
 	}
 
+	atomic.SwapUint64(&s.votedFor, req.CandidateId)
 	s.followerHeartbeatChan <- true
-	s.votedFor = req.CandidateId
 	resp.VoteGranted = true
 	return
 }
@@ -195,8 +200,8 @@ func (s *server) Do(commandName string, command []byte) (uint64, error) {
 	}
 
 	entry := &pb.LogEntry{
-		Term:        s.currentTerm,
-		Index:       s.log.currentIndex() + 1,
+		Term:        s.CurrentTerm(),
+		Index:       s.log.nextIndex(),
 		CommandName: commandName,
 		Command:     command,
 	}
@@ -219,8 +224,8 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 	}
 
 	resp = &pb.AppendEntriesResponse{
-		Term:        s.currentTerm,
-		Index:       s.log.currentIndex(),
+		Term:        s.CurrentTerm(),
+		Index:       s.log.CurrentIndex(),
 		CommitIndex: s.log.CommitIndex(),
 		Success:     false,
 	}
@@ -269,6 +274,8 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 
 func (s *server) Snapshot(ctx context.Context, req *pb.SnapshotRequest) (
 	resp *pb.SnapshotResponse, err error) {
+	log.Debug("Snapshot")
+
 	resp = &pb.SnapshotResponse{Success: false}
 
 	entry := s.log.getEntry(req.LastIndex)
@@ -283,6 +290,7 @@ func (s *server) Snapshot(ctx context.Context, req *pb.SnapshotRequest) (
 
 func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryRequest) (
 	resp *pb.SnapshotRecoveryResponse, err error) {
+	log.Debug("SnapshotRecovery")
 
 	if err = s.stateMachine.Recovery(req.State); err != nil {
 		log.Fatal("cannot recover from previous state")
@@ -292,7 +300,7 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 
 	// add member
 	for _, mb := range req.Members {
-		s.AddMember(&mb)
+		s.UpdateMember(&mb)
 	}
 
 	// 创建本地快照
@@ -324,18 +332,18 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 // Membership 成员信息
 func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
 	resp *pb.MembershipResponse, err error) {
-	if value, ok := s.members.Load(req.Member.Id); !ok {
-		s.members.Store(req.Member.Id, newMember(req.Member, s))
-	} else {
-		m := value.(*member)
-		if m.Address != req.Member.Address {
-			m.Address = req.Member.Address
-			m.cc = nil
-			s.members.Store(req.Member.Id, m)
-		}
-	}
+	log.Debug("Membership")
+
+	s.UpdateMember(&req.Member)
 
 	return &pb.MembershipResponse{Members: s.Members()}, nil
+}
+
+// Ping ping message
+func (s *server) Ping(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
+	log.Debug("Ping")
+
+	return &pb.Empty{}, nil
 }
 
 func (s *server) Stop() {
@@ -346,7 +354,7 @@ func (s *server) Stop() {
 	// 结束运行的事件循环
 	close(s.stopped)
 
-	s.grpcServer.Stop()
+	s.grpcServer.GracefulStop()
 
 	// 等待协程运行结束
 	s.routineGroup.Wait()
@@ -354,7 +362,7 @@ func (s *server) Stop() {
 	s.log.close()
 	s.setState(pb.NodeState_Stopped)
 
-	log.Info("stopped")
+	log.Info("state")
 }
 
 func (s *server) IsLeader() bool {
@@ -382,18 +390,9 @@ func (s *server) LeaderAddress() string {
 	return address
 }
 
-// setCurrentTerm 设置当前任期
-func (s *server) setCurrentTerm(term uint64) {
-	s.locker.Lock()
-	defer s.locker.Unlock()
-	s.currentTerm = term
-}
-
 // CurrentTerm 获取的当前任期
 func (s *server) CurrentTerm() uint64 {
-	s.locker.RLock()
-	defer s.locker.RUnlock()
-	return s.currentTerm
+	return s.log.CurrentTerm()
 }
 
 // Running 是否是运行状态
@@ -428,6 +427,8 @@ func (s *server) Address() string {
 
 // updateCurrentTerm 更新任期
 func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
+	log.Infof("update term:%d leaderId:%d", term, leaderId)
+
 	if s.State() == pb.NodeState_Leader {
 		// 如果是leader，则停止所有心跳
 		s.members.Range(func(key, value interface{}) bool {
@@ -441,19 +442,22 @@ func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
 		s.setState(pb.NodeState_Follower)
 	}
 
+	s.log.SetCurrentTerm(term)
+
 	// 更新状态
 	s.locker.Lock()
-	s.currentTerm = term
+	defer s.locker.Unlock()
 	s.leaderId = leaderId
-	s.votedFor = 0
-	s.locker.Unlock()
+	if leaderId != 0 {
+		s.votedFor = 0
+	}
 }
 
 // loop 事件循环
 func (s *server) loop() {
 	state := s.State()
 	for state != pb.NodeState_Stopped {
-		log.Infof("state: %s", state.String())
+		log.Infof("state:%s term:%d index:%d", state.String(), s.CurrentTerm(), s.log.CurrentIndex())
 		switch state {
 		case pb.NodeState_Follower:
 			s.followerLoop()
@@ -469,8 +473,8 @@ func (s *server) loop() {
 }
 
 func (s *server) followerLoop() {
-	electionTimeout := s.config.ElectionTimeout
-	timeoutChan := afterBetween(electionTimeout, electionTimeout*2)
+	heartbeatTimeout := s.config.HeartbeatTimeout
+	timeoutChan := afterBetween(heartbeatTimeout, heartbeatTimeout*2)
 	update := false
 
 	for s.State() == pb.NodeState_Follower {
@@ -483,7 +487,7 @@ func (s *server) followerLoop() {
 			// 收到leader的心跳消息，准备更新超时时间
 		case <-timeoutChan:
 			// 超时未收到leader的心跳消息
-			if s.log.currentIndex() > 0 || s.MemberCount() == 1 {
+			if s.log.CurrentIndex() > 0 || s.MemberCount() == 1 {
 				// 从follower转变成candidate
 				s.setState(pb.NodeState_Candidate)
 			} else {
@@ -493,7 +497,7 @@ func (s *server) followerLoop() {
 
 		if update {
 			// 在超时时间内收到了server的心跳消息，重置超时时间
-			timeoutChan = afterBetween(electionTimeout, electionTimeout*2)
+			timeoutChan = afterBetween(heartbeatTimeout, heartbeatTimeout*2)
 		}
 	}
 }
@@ -510,14 +514,14 @@ func (s *server) candidateLoop() {
 	for s.State() == pb.NodeState_Candidate {
 		if doVote {
 			// 任期加一
-			s.setCurrentTerm(s.CurrentTerm() + 1)
+			currentTerm := s.log.SetNextTerm()
 
 			// 自己的选票投给自己
-			s.votedFor = s.ID()
+			atomic.SwapUint64(&s.votedFor, s.ID())
 
 			respChan = make(chan *pb.RequestVoteResponse, s.MemberCount())
 			req := &pb.RequestVoteRequest{
-				Term:         s.CurrentTerm(),
+				Term:         currentTerm,
 				CandidateId:  s.ID(),
 				LastLogTerm:  lastLogTerm,
 				LastLogIndex: lastLogIndex,
@@ -527,7 +531,10 @@ func (s *server) candidateLoop() {
 				s.routineGroup.Add(1)
 				go func(m *member) {
 					defer s.routineGroup.Done()
-					_ = m.sendVoteRequest(req, respChan)
+					if err := m.sendVoteRequest(req, respChan); err != nil {
+						// 投票时以能连接的节点为目标，采用强一致性方式，不能通信的就移除
+						s.RemoveMember(m.Id)
+					}
 				}(value.(*member))
 				return true
 			})
@@ -567,13 +574,11 @@ func (s *server) candidateLoop() {
 // leaderLoop
 // 1、成员保活 2、发送日志条目 3、日志提交
 func (s *server) leaderLoop() {
-	logIndex, _ := s.log.lastInfo()
-
 	memberCount := s.MemberCount()
 	s.leaderRespChan = make(chan *pb.AppendEntriesResponse, memberCount)
 	s.members.Range(func(key, value interface{}) bool {
 		m := value.(*member)
-		m.setPrevLogIndex(logIndex)
+		m.setPrevLogIndex(s.log.CurrentIndex())
 		m.startHeartbeat()
 		return true
 	})
@@ -585,7 +590,10 @@ func (s *server) leaderLoop() {
 		for s.MemberCount() == 1 && s.state == pb.NodeState_Leader {
 			select {
 			case <-t.C:
-				single <- struct{}{}
+				select {
+				case single <- struct{}{}:
+				default:
+				}
 			}
 		}
 	}()
@@ -602,7 +610,7 @@ func (s *server) leaderLoop() {
 			return
 
 		case <-single:
-			_ = s.log.setCommitIndex(s.log.currentIndex())
+			_ = s.log.setCommitIndex(s.log.CurrentIndex())
 
 		case resp := <-s.leaderRespChan:
 			if resp.Term > s.CurrentTerm() {
@@ -618,7 +626,7 @@ func (s *server) leaderLoop() {
 
 			// 检查超过半数的条件
 			var indices []uint64
-			indices = append(indices, s.log.currentIndex())
+			indices = append(indices, s.log.CurrentIndex())
 			s.members.Range(func(key, value interface{}) bool {
 				indices = append(indices, value.(*member).getPrevLogIndex())
 				return true
@@ -647,17 +655,22 @@ func (s *server) snapshotLoop() {
 	}
 }
 
-func (s *server) AddMember(m *pb.Member) {
+func (s *server) UpdateMember(m *pb.Member) {
 	if s.ID() == m.Id {
 		return
 	}
 
-	if _, ok := s.members.Load(m.Id); ok {
-		return
+	if value, ok := s.members.Load(m.Id); ok {
+		mem := value.(*member)
+		if mem.Address == m.Address {
+			return
+		}
+		s.RemoveMember(mem.Id)
 	}
 
 	mem := newMember(*m, s)
 	if s.State() == pb.NodeState_Leader {
+		mem.setPrevLogIndex(s.log.CurrentIndex())
 		mem.startHeartbeat()
 	}
 
@@ -680,12 +693,12 @@ func (s *server) RemoveMember(id uint64) {
 		}
 
 		s.members.Delete(id)
+		log.Infof("remove member:%d", id)
 	}
 }
 
 func (s *server) Members() []pb.Member {
-	members := make([]pb.Member, 0)
-	members = append(members, pb.Member{Id: s.ID(), Address: s.Address()})
+	members := []pb.Member{s.Self()}
 	s.members.Range(func(key, value interface{}) bool {
 		members = append(members, value.(*member).Member)
 		return true
@@ -705,4 +718,36 @@ func (s *server) MemberCount() int {
 // QuorumSize 日志提交需要超过半数的节点（n/2+1）
 func (s *server) QuorumSize() int {
 	return s.MemberCount()/2 + 1
+}
+
+func (s *server) Self() pb.Member {
+	return pb.Member{Id: s.ID(), Address: s.Address()}
+}
+
+func (s *server) pullMembershipTrigger() {
+	ticker := time.NewTicker(s.config.PullMembershipInterval)
+
+	for {
+		select {
+		case <-s.stopped:
+			return
+		case <-ticker.C:
+			s.members.Range(func(key, value interface{}) bool {
+				m := value.(*member)
+				resp, err := m.sendMembershipRequest(&pb.MembershipRequest{Member: s.Self()})
+
+				if err != nil {
+					s.RemoveMember(m.Id)
+					log.Warnf("pull membership failed: %v", err)
+
+				} else {
+					for _, mem := range resp.Members {
+						s.UpdateMember(&mem)
+					}
+				}
+
+				return false
+			})
+		}
+	}
 }
