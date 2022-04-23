@@ -511,7 +511,7 @@ func (m *Member) XXX_DiscardUnknown() {
 var xxx_messageInfo_Member proto.InternalMessageInfo
 
 type MembershipRequest struct {
-	Member               Member   `protobuf:"bytes,1,opt,name=member,proto3" json:"member"`
+	Members              []Member `protobuf:"bytes,1,rep,name=members,proto3" json:"members"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -551,7 +551,7 @@ func (m *MembershipRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_MembershipRequest proto.InternalMessageInfo
 
 type MembershipResponse struct {
-	Members              []Member `protobuf:"bytes,1,rep,name=members,proto3" json:"members"`
+	Success              bool     `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -590,6 +590,88 @@ func (m *MembershipResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MembershipResponse proto.InternalMessageInfo
 
+type MemberRequest struct {
+	Leader               bool     `protobuf:"varint,1,opt,name=leader,proto3" json:"leader,omitempty"`
+	Member               Member   `protobuf:"bytes,2,opt,name=member,proto3" json:"member"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MemberRequest) Reset()         { *m = MemberRequest{} }
+func (m *MemberRequest) String() string { return proto.CompactTextString(m) }
+func (*MemberRequest) ProtoMessage()    {}
+func (*MemberRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{12}
+}
+func (m *MemberRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MemberRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MemberRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MemberRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MemberRequest.Merge(m, src)
+}
+func (m *MemberRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *MemberRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_MemberRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MemberRequest proto.InternalMessageInfo
+
+type MemberResponse struct {
+	Success              bool     `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Leader               Member   `protobuf:"bytes,2,opt,name=leader,proto3" json:"leader"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *MemberResponse) Reset()         { *m = MemberResponse{} }
+func (m *MemberResponse) String() string { return proto.CompactTextString(m) }
+func (*MemberResponse) ProtoMessage()    {}
+func (*MemberResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{13}
+}
+func (m *MemberResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *MemberResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_MemberResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *MemberResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_MemberResponse.Merge(m, src)
+}
+func (m *MemberResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *MemberResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_MemberResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_MemberResponse proto.InternalMessageInfo
+
 type Empty struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -600,7 +682,7 @@ func (m *Empty) Reset()         { *m = Empty{} }
 func (m *Empty) String() string { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()    {}
 func (*Empty) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{12}
+	return fileDescriptor_33c57e4bae7b9afd, []int{14}
 }
 func (m *Empty) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -643,7 +725,7 @@ func (m *Snapshot) Reset()         { *m = Snapshot{} }
 func (m *Snapshot) String() string { return proto.CompactTextString(m) }
 func (*Snapshot) ProtoMessage()    {}
 func (*Snapshot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{13}
+	return fileDescriptor_33c57e4bae7b9afd, []int{15}
 }
 func (m *Snapshot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -686,6 +768,8 @@ func init() {
 	proto.RegisterType((*Member)(nil), "Member")
 	proto.RegisterType((*MembershipRequest)(nil), "MembershipRequest")
 	proto.RegisterType((*MembershipResponse)(nil), "MembershipResponse")
+	proto.RegisterType((*MemberRequest)(nil), "MemberRequest")
+	proto.RegisterType((*MemberResponse)(nil), "MemberResponse")
 	proto.RegisterType((*Empty)(nil), "Empty")
 	proto.RegisterType((*Snapshot)(nil), "Snapshot")
 }
@@ -693,55 +777,59 @@ func init() {
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 767 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x55, 0xcb, 0x6e, 0xd3, 0x4a,
-	0x18, 0xf6, 0x38, 0xce, 0xed, 0x4f, 0x7a, 0xea, 0x4e, 0xd3, 0x73, 0x7c, 0x2c, 0x64, 0xaa, 0x91,
-	0x80, 0x82, 0x90, 0x11, 0x65, 0x81, 0x54, 0x84, 0x04, 0x45, 0x05, 0x45, 0x94, 0x0a, 0xb9, 0x88,
-	0x45, 0x77, 0x6e, 0x3c, 0xb8, 0x46, 0xb1, 0xc7, 0xd8, 0xd3, 0x42, 0x91, 0x78, 0x07, 0x96, 0x3c,
-	0x02, 0x2b, 0x9e, 0xa3, 0x4b, 0x36, 0x2c, 0xd8, 0xa0, 0x36, 0xbc, 0x00, 0x8f, 0x80, 0x3c, 0xb6,
-	0x93, 0x89, 0xd3, 0x86, 0x15, 0xab, 0xcc, 0xf7, 0xcf, 0xc5, 0xdf, 0xe5, 0x9f, 0x09, 0x2c, 0x84,
-	0x34, 0x4d, 0x5d, 0x9f, 0xda, 0x71, 0xc2, 0x38, 0x33, 0x7b, 0x3e, 0xf3, 0x99, 0x18, 0xde, 0xca,
-	0x46, 0x79, 0x95, 0x7c, 0x44, 0x80, 0x1d, 0xfa, 0xe6, 0x90, 0xa6, 0xfc, 0x25, 0xe3, 0xb4, 0x18,
-	0x62, 0x0c, 0x1a, 0xa7, 0x49, 0x68, 0xa0, 0x55, 0xb4, 0xa6, 0x39, 0x62, 0x8c, 0x57, 0xa1, 0x33,
-	0x70, 0x23, 0x2f, 0xf0, 0x5c, 0x4e, 0xfb, 0x9e, 0xa1, 0x8a, 0x29, 0xb9, 0x94, 0xad, 0x18, 0xba,
-	0x29, 0xdf, 0x66, 0xfe, 0x8b, 0x6c, 0x73, 0x2d, 0x5f, 0x21, 0x95, 0x30, 0x81, 0x6e, 0x01, 0xfb,
-	0x91, 0x47, 0xdf, 0x19, 0x9a, 0x58, 0x32, 0x55, 0x23, 0x4f, 0x61, 0x79, 0x8a, 0x51, 0x1a, 0xb3,
-	0x28, 0xa5, 0x17, 0x51, 0x3a, 0x62, 0x9c, 0x3e, 0x49, 0xdc, 0x88, 0xd3, 0x9c, 0x52, 0xcb, 0x91,
-	0x4b, 0x24, 0x86, 0xd6, 0x36, 0xf3, 0xb7, 0x22, 0x9e, 0x1c, 0xe3, 0x1e, 0xd4, 0x03, 0xf1, 0xd5,
-	0xfc, 0x88, 0x1c, 0x8c, 0xcf, 0x55, 0x2b, 0x52, 0x59, 0x18, 0xba, 0x91, 0xb7, 0xe3, 0x86, 0x54,
-	0x08, 0x69, 0x3b, 0x72, 0x09, 0x1b, 0xd0, 0x2c, 0xa0, 0xd0, 0xd0, 0x75, 0x4a, 0x48, 0xbe, 0x23,
-	0xe8, 0x3d, 0x8c, 0x63, 0x1a, 0x79, 0xd9, 0x57, 0x03, 0x9a, 0xce, 0xf3, 0xd4, 0x84, 0xd6, 0x90,
-	0xba, 0x1e, 0x4d, 0xc6, 0x86, 0x8e, 0x71, 0x46, 0x22, 0x4e, 0xe8, 0x51, 0xc5, 0x4d, 0xa9, 0x94,
-	0xb9, 0x59, 0xc0, 0x29, 0x37, 0xe5, 0x5a, 0x29, 0x25, 0xe0, 0xf9, 0x92, 0x7a, 0x91, 0xda, 0xa4,
-	0x84, 0xaf, 0x43, 0x93, 0xe6, 0x4c, 0x8d, 0xc6, 0x6a, 0x6d, 0xad, 0xb3, 0xde, 0xb6, 0x4b, 0xcb,
-	0x36, 0xb5, 0x93, 0x1f, 0x97, 0x15, 0xa7, 0x9c, 0x27, 0x1f, 0x60, 0xa5, 0x22, 0x6d, 0x4e, 0x38,
-	0x63, 0xbb, 0x55, 0xd9, 0xee, 0x0a, 0x9f, 0xda, 0x2c, 0x1f, 0x03, 0x9a, 0xe9, 0xe1, 0x60, 0x40,
-	0xd3, 0x54, 0x08, 0x6a, 0x39, 0x25, 0x24, 0x3e, 0x2c, 0xee, 0x46, 0x6e, 0x9c, 0x1e, 0x30, 0x5e,
-	0x9a, 0x2a, 0x1b, 0x88, 0x2a, 0x06, 0x5e, 0x82, 0x76, 0xd6, 0x58, 0x7d, 0x89, 0xc4, 0xa4, 0x20,
-	0x76, 0xba, 0x29, 0x97, 0xbc, 0x1d, 0x63, 0x72, 0x13, 0xf4, 0xc9, 0x87, 0x0a, 0x89, 0x12, 0x2d,
-	0x34, 0x4d, 0xeb, 0x0b, 0x82, 0xff, 0x26, 0xcb, 0x07, 0xec, 0x88, 0x26, 0xc7, 0x7f, 0x95, 0x1f,
-	0xbe, 0x06, 0xcd, 0x90, 0x86, 0xfb, 0x34, 0xc9, 0x2c, 0xca, 0x22, 0x6b, 0xda, 0xcf, 0x04, 0x2e,
-	0x03, 0x2b, 0x66, 0xb3, 0x0c, 0x52, 0xee, 0x72, 0x2a, 0x72, 0xef, 0x3a, 0x39, 0x20, 0xaf, 0xc1,
-	0x98, 0xe5, 0x3b, 0x27, 0x49, 0x49, 0xba, 0x3a, 0x25, 0xfd, 0xcf, 0x69, 0x92, 0x75, 0x68, 0xe4,
-	0xd4, 0xf0, 0x3f, 0xa0, 0x06, 0xa5, 0x09, 0x6a, 0xe0, 0x65, 0xa7, 0xba, 0x9e, 0x97, 0x94, 0xa7,
-	0xb6, 0x9d, 0x12, 0x92, 0x0d, 0x58, 0xca, 0xf7, 0xa4, 0x07, 0x41, 0x5c, 0x3a, 0x79, 0x05, 0x1a,
-	0xb9, 0x2a, 0x71, 0xc4, 0x8c, 0xe4, 0x62, 0x92, 0xdc, 0x07, 0x2c, 0xef, 0x2d, 0x54, 0x49, 0x86,
-	0xa1, 0x79, 0x86, 0x91, 0x26, 0xd4, 0xb7, 0xc2, 0x98, 0x1f, 0x93, 0x3d, 0x68, 0x95, 0x1e, 0x4d,
-	0x07, 0x85, 0xe6, 0x05, 0xa5, 0x56, 0x82, 0x1a, 0xfb, 0x5f, 0x93, 0xfc, 0xbf, 0xe1, 0x41, 0x7b,
-	0x87, 0x79, 0x74, 0x37, 0x03, 0xb8, 0x03, 0xcd, 0x5d, 0xce, 0xe2, 0x98, 0x7a, 0xba, 0x82, 0x17,
-	0xa1, 0xd3, 0x8f, 0x02, 0x1e, 0xb8, 0xc3, 0xe0, 0x3d, 0xf5, 0x74, 0x84, 0x01, 0x1a, 0xdb, 0xa2,
-	0x5f, 0x74, 0x15, 0x77, 0xa1, 0xf5, 0x98, 0x0d, 0x87, 0xec, 0x2d, 0x4d, 0xf4, 0x1a, 0x5e, 0x80,
-	0xf6, 0xa3, 0xf2, 0xed, 0xd5, 0x35, 0xac, 0x43, 0xb7, 0xe4, 0xcb, 0x83, 0xc8, 0xd7, 0xeb, 0xeb,
-	0xdf, 0x54, 0xd0, 0x1c, 0xf7, 0x15, 0xc7, 0x1b, 0xd0, 0x91, 0x1e, 0x54, 0xbc, 0x6c, 0xcf, 0x3e,
-	0xf8, 0x66, 0xcf, 0x3e, 0xe7, 0xcd, 0x25, 0x0a, 0x7e, 0x00, 0x0b, 0x53, 0x37, 0x1e, 0xaf, 0xd8,
-	0xe7, 0x3d, 0x6e, 0xe6, 0xbf, 0xf6, 0xb9, 0x0f, 0x03, 0x51, 0xf0, 0x6d, 0xc9, 0x48, 0xdd, 0xae,
-	0xdc, 0x5f, 0x73, 0xc9, 0xae, 0x5e, 0x34, 0xa2, 0xe0, 0xbe, 0x7c, 0xfd, 0xf2, 0xfe, 0xc4, 0x86,
-	0x7d, 0xc1, 0x15, 0x33, 0xff, 0xb7, 0x2f, 0x6a, 0x66, 0xa2, 0xe0, 0xbb, 0x00, 0x93, 0x76, 0xc0,
-	0xd8, 0x9e, 0xe9, 0x2b, 0x73, 0xd9, 0x9e, 0xed, 0x17, 0xa2, 0x60, 0x03, 0xb4, 0xe7, 0x41, 0xe4,
-	0xe3, 0x86, 0x2d, 0xfa, 0xc1, 0x2c, 0x7e, 0x89, 0xb2, 0x79, 0xf5, 0xe4, 0xcc, 0x52, 0x4e, 0xcf,
-	0x2c, 0xf4, 0xeb, 0xcc, 0x42, 0x9f, 0x47, 0x16, 0x3a, 0x19, 0x59, 0xe8, 0xeb, 0xc8, 0x42, 0xa7,
-	0x23, 0x0b, 0x7d, 0xfa, 0x69, 0x29, 0x7b, 0x9a, 0x7d, 0x2f, 0xde, 0xdf, 0x6f, 0x88, 0x7f, 0xd8,
-	0x3b, 0xbf, 0x03, 0x00, 0x00, 0xff, 0xff, 0x77, 0x0c, 0x8c, 0xe0, 0x88, 0x07, 0x00, 0x00,
+	// 829 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x6e, 0xe4, 0x44,
+	0x10, 0x76, 0x7b, 0x9c, 0xf9, 0xa9, 0x99, 0x6c, 0xbc, 0x9d, 0xec, 0x62, 0x2c, 0x64, 0xa2, 0x96,
+	0x80, 0x05, 0xa1, 0x46, 0x84, 0x03, 0x12, 0x70, 0x60, 0x17, 0x2d, 0x68, 0x44, 0x88, 0xc0, 0x41,
+	0x1c, 0xf6, 0xe6, 0x4c, 0x37, 0x5e, 0xa3, 0xb1, 0xdb, 0xd8, 0xbd, 0x03, 0x41, 0xe2, 0x1d, 0x38,
+	0xf2, 0x08, 0x9c, 0x38, 0xf3, 0x08, 0x39, 0x72, 0xe5, 0x82, 0x36, 0xc3, 0x0b, 0xf0, 0x08, 0xc8,
+	0x6d, 0xf7, 0x4c, 0xdb, 0x33, 0x99, 0x70, 0xd9, 0xd3, 0xf4, 0x57, 0x5d, 0x5d, 0xf5, 0xd5, 0x57,
+	0xd5, 0xed, 0x81, 0xfd, 0x94, 0x97, 0x65, 0x14, 0x73, 0x9a, 0x17, 0x42, 0x0a, 0xff, 0x28, 0x16,
+	0xb1, 0x50, 0xcb, 0x77, 0xaa, 0x55, 0x6d, 0x25, 0xbf, 0x20, 0xc0, 0x21, 0xff, 0xfe, 0x19, 0x2f,
+	0xe5, 0x37, 0x42, 0xf2, 0x66, 0x89, 0x31, 0x38, 0x92, 0x17, 0xa9, 0x87, 0x8e, 0xd1, 0x03, 0x27,
+	0x54, 0x6b, 0x7c, 0x0c, 0xe3, 0x59, 0x94, 0xb1, 0x84, 0x45, 0x92, 0x4f, 0x99, 0x67, 0xab, 0x2d,
+	0xd3, 0x54, 0x79, 0xcc, 0xa3, 0x52, 0x9e, 0x8a, 0xf8, 0xeb, 0xea, 0x70, 0xaf, 0xf6, 0x30, 0x4c,
+	0x98, 0xc0, 0xa4, 0x81, 0xd3, 0x8c, 0xf1, 0x1f, 0x3d, 0x47, 0xb9, 0xb4, 0x6c, 0xe4, 0x73, 0x38,
+	0x6c, 0x31, 0x2a, 0x73, 0x91, 0x95, 0xfc, 0x26, 0x4a, 0x0b, 0x21, 0xf9, 0x67, 0x45, 0x94, 0x49,
+	0x5e, 0x53, 0x1a, 0x86, 0xa6, 0x89, 0xe4, 0x30, 0x3c, 0x15, 0xf1, 0xe3, 0x4c, 0x16, 0x97, 0xf8,
+	0x08, 0xf6, 0x12, 0x95, 0xb5, 0x0e, 0x51, 0x83, 0x55, 0x5c, 0xbb, 0x53, 0xaa, 0x48, 0xd3, 0x28,
+	0x63, 0x67, 0x51, 0xca, 0x55, 0x21, 0xa3, 0xd0, 0x34, 0x61, 0x0f, 0x06, 0x0d, 0x54, 0x35, 0x4c,
+	0x42, 0x0d, 0xc9, 0x5f, 0x08, 0x8e, 0x1e, 0xe6, 0x39, 0xcf, 0x58, 0x95, 0x35, 0xe1, 0xe5, 0x2e,
+	0x4d, 0x7d, 0x18, 0xce, 0x79, 0xc4, 0x78, 0xb1, 0x12, 0x74, 0x85, 0x2b, 0x12, 0x79, 0xc1, 0x17,
+	0x1d, 0x35, 0x0d, 0x53, 0xa5, 0x66, 0x03, 0x5b, 0x6a, 0x9a, 0x36, 0x5d, 0x4a, 0x22, 0x6b, 0x97,
+	0xbd, 0xa6, 0x6b, 0x6b, 0x13, 0x7e, 0x13, 0x06, 0xbc, 0x66, 0xea, 0xf5, 0x8f, 0x7b, 0x0f, 0xc6,
+	0x27, 0x23, 0xaa, 0x25, 0x7b, 0xe4, 0x5c, 0xfd, 0xfd, 0xaa, 0x15, 0xea, 0x7d, 0xf2, 0x33, 0xdc,
+	0xeb, 0x94, 0xb6, 0xa3, 0x39, 0x2b, 0xb9, 0x6d, 0x53, 0xee, 0x0e, 0x9f, 0xde, 0x26, 0x1f, 0x0f,
+	0x06, 0xe5, 0xb3, 0xd9, 0x8c, 0x97, 0xa5, 0x2a, 0x68, 0x18, 0x6a, 0x48, 0x62, 0x38, 0x38, 0xcf,
+	0xa2, 0xbc, 0x7c, 0x2a, 0xa4, 0x16, 0xd5, 0x14, 0x10, 0x75, 0x04, 0x7c, 0x05, 0x46, 0xd5, 0x60,
+	0x4d, 0x0d, 0x12, 0x6b, 0x83, 0x3a, 0x19, 0x95, 0xd2, 0xd0, 0x76, 0x85, 0xc9, 0xdb, 0xe0, 0xae,
+	0x13, 0x35, 0x25, 0x1a, 0xb4, 0x50, 0x9b, 0xd6, 0xef, 0x08, 0x5e, 0x5a, 0xbb, 0xcf, 0xc4, 0x82,
+	0x17, 0x97, 0x2f, 0x94, 0x1f, 0x7e, 0x03, 0x06, 0x29, 0x4f, 0x2f, 0x78, 0x51, 0x49, 0x54, 0xb5,
+	0x6c, 0x40, 0xbf, 0x50, 0x58, 0x37, 0xac, 0xd9, 0xad, 0x7a, 0x50, 0xca, 0x48, 0x72, 0xd5, 0xf7,
+	0x49, 0x58, 0x03, 0xf2, 0x1d, 0x78, 0x9b, 0x7c, 0x77, 0x74, 0xd2, 0x28, 0xdd, 0x6e, 0x95, 0x7e,
+	0x7b, 0x37, 0xc9, 0x09, 0xf4, 0x6b, 0x6a, 0xf8, 0x0e, 0xd8, 0x89, 0x16, 0xc1, 0x4e, 0x58, 0x15,
+	0x35, 0x62, 0xac, 0xd0, 0x51, 0x47, 0xa1, 0x86, 0xe4, 0x23, 0xb8, 0x5b, 0x9f, 0x29, 0x9f, 0x26,
+	0xb9, 0x56, 0xd2, 0xa8, 0x19, 0xed, 0xaa, 0x99, 0x50, 0xc0, 0xe6, 0xe9, 0x5b, 0xdb, 0x77, 0x06,
+	0xfb, 0xb5, 0xbf, 0xce, 0x74, 0x1f, 0xfa, 0x75, 0x8f, 0x1a, 0xcf, 0x06, 0xe1, 0xd7, 0xa0, 0x5f,
+	0xe7, 0x50, 0x7c, 0x37, 0x08, 0x34, 0x9b, 0xe4, 0x2b, 0xb8, 0xa3, 0xe3, 0xdd, 0x96, 0xbb, 0x0a,
+	0xd9, 0xa4, 0xda, 0x1e, 0xb2, 0xde, 0x24, 0x03, 0xd8, 0x7b, 0x9c, 0xe6, 0xf2, 0x92, 0x3c, 0x81,
+	0xa1, 0xee, 0x5c, 0x7b, 0x7c, 0xd0, 0xae, 0xf1, 0xb1, 0x3b, 0xe3, 0xb3, 0x9a, 0x8a, 0x9e, 0x31,
+	0x15, 0x6f, 0x31, 0x18, 0x9d, 0x09, 0xc6, 0xcf, 0x2b, 0x80, 0xc7, 0x30, 0x38, 0x97, 0x22, 0xcf,
+	0x39, 0x73, 0x2d, 0x7c, 0x00, 0xe3, 0x69, 0x96, 0xc8, 0x24, 0x9a, 0x27, 0x3f, 0x71, 0xe6, 0x22,
+	0x0c, 0xd0, 0x3f, 0x55, 0xcc, 0x5c, 0x1b, 0x4f, 0x60, 0xf8, 0xa9, 0x98, 0xcf, 0xc5, 0x0f, 0xbc,
+	0x70, 0x7b, 0x78, 0x1f, 0x46, 0x9f, 0xe8, 0x2f, 0x82, 0xeb, 0x60, 0x17, 0x26, 0x9a, 0xaf, 0x4c,
+	0xb2, 0xd8, 0xdd, 0x3b, 0xf9, 0xa3, 0x07, 0x4e, 0x18, 0x7d, 0x2b, 0xf1, 0x07, 0x30, 0x36, 0x9e,
+	0x79, 0x7c, 0x48, 0x37, 0x3f, 0x43, 0xfe, 0x11, 0xdd, 0xf2, 0x25, 0x20, 0x16, 0xfe, 0x18, 0xf6,
+	0x5b, 0xef, 0x10, 0xbe, 0x47, 0xb7, 0x3d, 0xb9, 0xfe, 0x7d, 0xba, 0xf5, 0xb9, 0x22, 0x16, 0x7e,
+	0xd7, 0x10, 0xd2, 0xa5, 0x9d, 0x57, 0xc5, 0xbf, 0x4b, 0xbb, 0xd7, 0x9f, 0x58, 0x78, 0x6a, 0x3e,
+	0x0a, 0xf5, 0xad, 0xc1, 0x1e, 0xbd, 0xe1, 0xe2, 0xfb, 0x2f, 0xd3, 0x9b, 0xae, 0x18, 0xb1, 0xf0,
+	0xfb, 0x00, 0xeb, 0x11, 0xc5, 0x98, 0x6e, 0x4c, 0xbb, 0x7f, 0x48, 0x37, 0x67, 0x98, 0x58, 0x98,
+	0xc2, 0xe8, 0x21, 0x63, 0xfa, 0x42, 0xd1, 0xd6, 0xdc, 0xfa, 0x07, 0xb4, 0x3d, 0x77, 0xaa, 0xcc,
+	0x49, 0xc8, 0x53, 0xb1, 0xe0, 0xff, 0xff, 0x88, 0x07, 0xce, 0x97, 0x49, 0x16, 0xe3, 0x3e, 0x55,
+	0x23, 0xe7, 0x37, 0xbf, 0xc4, 0x7a, 0xf4, 0xfa, 0xd5, 0x75, 0x60, 0x3d, 0xbf, 0x0e, 0xd0, 0xbf,
+	0xd7, 0x01, 0xfa, 0x6d, 0x19, 0xa0, 0xab, 0x65, 0x80, 0xfe, 0x5c, 0x06, 0xe8, 0xf9, 0x32, 0x40,
+	0xbf, 0xfe, 0x13, 0x58, 0x4f, 0x1c, 0xfa, 0x61, 0x7e, 0x71, 0xd1, 0x57, 0x7f, 0x2d, 0xde, 0xfb,
+	0x2f, 0x00, 0x00, 0xff, 0xff, 0x6c, 0x51, 0x68, 0x5d, 0x81, 0x08, 0x00, 0x00,
 }
 
 func (this *RequestVoteRequest) VerboseEqual(that interface{}) error {
@@ -1533,8 +1621,13 @@ func (this *MembershipRequest) VerboseEqual(that interface{}) error {
 	} else if this == nil {
 		return fmt.Errorf("that is type *MembershipRequest but is not nil && this == nil")
 	}
-	if !this.Member.Equal(&that1.Member) {
-		return fmt.Errorf("Member this(%v) Not Equal that(%v)", this.Member, that1.Member)
+	if len(this.Members) != len(that1.Members) {
+		return fmt.Errorf("Members this(%v) Not Equal that(%v)", len(this.Members), len(that1.Members))
+	}
+	for i := range this.Members {
+		if !this.Members[i].Equal(&that1.Members[i]) {
+			return fmt.Errorf("Members this[%v](%v) Not Equal that[%v](%v)", i, this.Members[i], i, that1.Members[i])
+		}
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
@@ -1560,8 +1653,13 @@ func (this *MembershipRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Member.Equal(&that1.Member) {
+	if len(this.Members) != len(that1.Members) {
 		return false
+	}
+	for i := range this.Members {
+		if !this.Members[i].Equal(&that1.Members[i]) {
+			return false
+		}
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return false
@@ -1593,13 +1691,8 @@ func (this *MembershipResponse) VerboseEqual(that interface{}) error {
 	} else if this == nil {
 		return fmt.Errorf("that is type *MembershipResponse but is not nil && this == nil")
 	}
-	if len(this.Members) != len(that1.Members) {
-		return fmt.Errorf("Members this(%v) Not Equal that(%v)", len(this.Members), len(that1.Members))
-	}
-	for i := range this.Members {
-		if !this.Members[i].Equal(&that1.Members[i]) {
-			return fmt.Errorf("Members this[%v](%v) Not Equal that[%v](%v)", i, this.Members[i], i, that1.Members[i])
-		}
+	if this.Success != that1.Success {
+		return fmt.Errorf("Success this(%v) Not Equal that(%v)", this.Success, that1.Success)
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
@@ -1625,13 +1718,140 @@ func (this *MembershipResponse) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if len(this.Members) != len(that1.Members) {
+	if this.Success != that1.Success {
 		return false
 	}
-	for i := range this.Members {
-		if !this.Members[i].Equal(&that1.Members[i]) {
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return false
+	}
+	return true
+}
+func (this *MemberRequest) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*MemberRequest)
+	if !ok {
+		that2, ok := that.(MemberRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return fmt.Errorf("that is not of type *MemberRequest")
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *MemberRequest but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *MemberRequest but is not nil && this == nil")
+	}
+	if this.Leader != that1.Leader {
+		return fmt.Errorf("Leader this(%v) Not Equal that(%v)", this.Leader, that1.Leader)
+	}
+	if !this.Member.Equal(&that1.Member) {
+		return fmt.Errorf("Member this(%v) Not Equal that(%v)", this.Member, that1.Member)
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
+	}
+	return nil
+}
+func (this *MemberRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*MemberRequest)
+	if !ok {
+		that2, ok := that.(MemberRequest)
+		if ok {
+			that1 = &that2
+		} else {
 			return false
 		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Leader != that1.Leader {
+		return false
+	}
+	if !this.Member.Equal(&that1.Member) {
+		return false
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return false
+	}
+	return true
+}
+func (this *MemberResponse) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*MemberResponse)
+	if !ok {
+		that2, ok := that.(MemberResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return fmt.Errorf("that is not of type *MemberResponse")
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *MemberResponse but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *MemberResponse but is not nil && this == nil")
+	}
+	if this.Success != that1.Success {
+		return fmt.Errorf("Success this(%v) Not Equal that(%v)", this.Success, that1.Success)
+	}
+	if !this.Leader.Equal(&that1.Leader) {
+		return fmt.Errorf("Leader this(%v) Not Equal that(%v)", this.Leader, that1.Leader)
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
+	}
+	return nil
+}
+func (this *MemberResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*MemberResponse)
+	if !ok {
+		that2, ok := that.(MemberResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Success != that1.Success {
+		return false
+	}
+	if !this.Leader.Equal(&that1.Leader) {
+		return false
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return false
@@ -1936,7 +2156,13 @@ func (this *MembershipRequest) GoString() string {
 	}
 	s := make([]string, 0, 5)
 	s = append(s, "&pb.MembershipRequest{")
-	s = append(s, "Member: "+strings.Replace(this.Member.GoString(), `&`, ``, 1)+",\n")
+	if this.Members != nil {
+		vs := make([]Member, len(this.Members))
+		for i := range vs {
+			vs[i] = this.Members[i]
+		}
+		s = append(s, "Members: "+fmt.Sprintf("%#v", vs)+",\n")
+	}
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
 	}
@@ -1949,13 +2175,35 @@ func (this *MembershipResponse) GoString() string {
 	}
 	s := make([]string, 0, 5)
 	s = append(s, "&pb.MembershipResponse{")
-	if this.Members != nil {
-		vs := make([]Member, len(this.Members))
-		for i := range vs {
-			vs[i] = this.Members[i]
-		}
-		s = append(s, "Members: "+fmt.Sprintf("%#v", vs)+",\n")
+	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
+	if this.XXX_unrecognized != nil {
+		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
 	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *MemberRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&pb.MemberRequest{")
+	s = append(s, "Leader: "+fmt.Sprintf("%#v", this.Leader)+",\n")
+	s = append(s, "Member: "+strings.Replace(this.Member.GoString(), `&`, ``, 1)+",\n")
+	if this.XXX_unrecognized != nil {
+		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *MemberResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&pb.MemberResponse{")
+	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
+	s = append(s, "Leader: "+strings.Replace(this.Leader.GoString(), `&`, ``, 1)+",\n")
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
 	}
@@ -2018,8 +2266,12 @@ type RaftClient interface {
 	Snapshot(ctx context.Context, in *SnapshotRequest, opts ...grpc.CallOption) (*SnapshotResponse, error)
 	// SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
 	SnapshotRecovery(ctx context.Context, in *SnapshotRecoveryRequest, opts ...grpc.CallOption) (*SnapshotRecoveryResponse, error)
-	// Membership 成员信息
+	// Membership 当前集群中的成员信息
 	Membership(ctx context.Context, in *MembershipRequest, opts ...grpc.CallOption) (*MembershipResponse, error)
+	// AddMember 添加成员
+	AddMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error)
+	// RemoveMember 删除成员
+	RemoveMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error)
 	// Ping 探测节点状态
 	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
@@ -2077,6 +2329,24 @@ func (c *raftClient) Membership(ctx context.Context, in *MembershipRequest, opts
 	return out, nil
 }
 
+func (c *raftClient) AddMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
+	out := new(MemberResponse)
+	err := c.cc.Invoke(ctx, "/Raft/AddMember", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *raftClient) RemoveMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
+	out := new(MemberResponse)
+	err := c.cc.Invoke(ctx, "/Raft/RemoveMember", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *raftClient) Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/Raft/Ping", in, out, opts...)
@@ -2096,8 +2366,12 @@ type RaftServer interface {
 	Snapshot(context.Context, *SnapshotRequest) (*SnapshotResponse, error)
 	// SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
 	SnapshotRecovery(context.Context, *SnapshotRecoveryRequest) (*SnapshotRecoveryResponse, error)
-	// Membership 成员信息
+	// Membership 当前集群中的成员信息
 	Membership(context.Context, *MembershipRequest) (*MembershipResponse, error)
+	// AddMember 添加成员
+	AddMember(context.Context, *MemberRequest) (*MemberResponse, error)
+	// RemoveMember 删除成员
+	RemoveMember(context.Context, *MemberRequest) (*MemberResponse, error)
 	// Ping 探测节点状态
 	Ping(context.Context, *Empty) (*Empty, error)
 }
@@ -2120,6 +2394,12 @@ func (*UnimplementedRaftServer) SnapshotRecovery(ctx context.Context, req *Snaps
 }
 func (*UnimplementedRaftServer) Membership(ctx context.Context, req *MembershipRequest) (*MembershipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Membership not implemented")
+}
+func (*UnimplementedRaftServer) AddMember(ctx context.Context, req *MemberRequest) (*MemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddMember not implemented")
+}
+func (*UnimplementedRaftServer) RemoveMember(ctx context.Context, req *MemberRequest) (*MemberResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveMember not implemented")
 }
 func (*UnimplementedRaftServer) Ping(ctx context.Context, req *Empty) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
@@ -2219,6 +2499,42 @@ func _Raft_Membership_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Raft_AddMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RaftServer).AddMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Raft/AddMember",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RaftServer).AddMember(ctx, req.(*MemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Raft_RemoveMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RaftServer).RemoveMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Raft/RemoveMember",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RaftServer).RemoveMember(ctx, req.(*MemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Raft_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
@@ -2260,6 +2576,14 @@ var _Raft_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Membership",
 			Handler:    _Raft_Membership_Handler,
+		},
+		{
+			MethodName: "AddMember",
+			Handler:    _Raft_AddMember_Handler,
+		},
+		{
+			MethodName: "RemoveMember",
+			Handler:    _Raft_RemoveMember_Handler,
 		},
 		{
 			MethodName: "Ping",
@@ -2780,16 +3104,20 @@ func (m *MembershipRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	{
-		size, err := m.Member.MarshalToSizedBuffer(dAtA[:i])
-		if err != nil {
-			return 0, err
+	if len(m.Members) > 0 {
+		for iNdEx := len(m.Members) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Members[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintMessage(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
 		}
-		i -= size
-		i = encodeVarintMessage(dAtA, i, uint64(size))
 	}
-	i--
-	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
 }
 
@@ -2817,19 +3145,109 @@ func (m *MembershipResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Members) > 0 {
-		for iNdEx := len(m.Members) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Members[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintMessage(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0xa
+	if m.Success {
+		i--
+		if m.Success {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
 		}
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MemberRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MemberRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MemberRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	{
+		size, err := m.Member.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintMessage(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	if m.Leader {
+		i--
+		if m.Leader {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *MemberResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *MemberResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *MemberResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	{
+		size, err := m.Leader.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintMessage(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	if m.Success {
+		i--
+		if m.Success {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
 	}
 	return len(dAtA) - i, nil
 }
@@ -3154,8 +3572,12 @@ func (m *MembershipRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = m.Member.Size()
-	n += 1 + l + sovMessage(uint64(l))
+	if len(m.Members) > 0 {
+		for _, e := range m.Members {
+			l = e.Size()
+			n += 1 + l + sovMessage(uint64(l))
+		}
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -3168,12 +3590,43 @@ func (m *MembershipResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if len(m.Members) > 0 {
-		for _, e := range m.Members {
-			l = e.Size()
-			n += 1 + l + sovMessage(uint64(l))
-		}
+	if m.Success {
+		n += 2
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *MemberRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Leader {
+		n += 2
+	}
+	l = m.Member.Size()
+	n += 1 + l + sovMessage(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *MemberResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Success {
+		n += 2
+	}
+	l = m.Leader.Size()
+	n += 1 + l + sovMessage(uint64(l))
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -4497,7 +4950,7 @@ func (m *MembershipRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Member", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Members", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -4524,7 +4977,8 @@ func (m *MembershipRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if err := m.Member.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			m.Members = append(m.Members, Member{})
+			if err := m.Members[len(m.Members)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -4580,8 +5034,99 @@ func (m *MembershipResponse) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Success", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Success = bool(v != 0)
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMessage(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MemberRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMessage
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MemberRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MemberRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Leader", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Leader = bool(v != 0)
+		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Members", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Member", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -4608,8 +5153,111 @@ func (m *MembershipResponse) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Members = append(m.Members, Member{})
-			if err := m.Members[len(m.Members)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.Member.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMessage(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *MemberResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMessage
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: MemberResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: MemberResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Success", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Success = bool(v != 0)
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Leader", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMessage
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Leader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex

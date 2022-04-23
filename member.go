@@ -181,6 +181,34 @@ func (m *member) sendSnapshotRecoveryRequest(snapshot *pb.Snapshot) error {
 	return nil
 }
 
+func (m *member) sendAddMember(req *pb.MemberRequest) error {
+	client, err := m.client()
+	if err != nil {
+		return err
+	}
+
+	err = timeoutFunc(m.dialTimeout, func() error {
+		_, err = client.AddMember(context.Background(), req)
+		return err
+	})
+
+	return err
+}
+
+func (m *member) sendRemoveMember(req *pb.MemberRequest) error {
+	client, err := m.client()
+	if err != nil {
+		return err
+	}
+
+	err = timeoutFunc(m.dialTimeout, func() error {
+		_, err = client.RemoveMember(context.Background(), req)
+		return err
+	})
+
+	return err
+}
+
 func (m *member) sendMembershipRequest(req *pb.MembershipRequest) (*pb.MembershipResponse, error) {
 	client, err := m.client()
 	if err != nil {
@@ -253,7 +281,7 @@ func (m *member) heartbeat() {
 				if i == 3 {
 					// 移除节点,不需要return，在RemoveMember方法里会向stop通道传值
 					m.setCC(nil)
-					m.server.RemoveMember(m.Id)
+					m.server.removeMember(m.Id)
 					atomic.SwapInt32(&m.state, 1)
 					break
 				}
@@ -311,7 +339,7 @@ func (m *member) dial() error {
 		return err
 	}
 
-	log.Infof("dial %s success", m.Address)
+	// log.Infof("dial %s success", m.Address)
 
 	m.setCC(cc)
 	return nil

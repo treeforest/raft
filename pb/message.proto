@@ -25,8 +25,14 @@ service Raft {
   // SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
   rpc SnapshotRecovery(SnapshotRecoveryRequest) returns (SnapshotRecoveryResponse) {}
 
-  // Membership 成员信息
+  // Membership 当前集群中的成员信息
   rpc Membership(MembershipRequest) returns (MembershipResponse){}
+
+  // AddMember 添加成员
+  rpc AddMember(MemberRequest) returns (MemberResponse){}
+
+  // RemoveMember 删除成员
+  rpc RemoveMember(MemberRequest) returns (MemberResponse){}
 
   // Ping 探测节点状态
   rpc Ping(Empty) returns (Empty) {}
@@ -147,11 +153,21 @@ message Member {
 }
 
 message MembershipRequest {
-  Member member = 1 [(gogoproto.nullable) = false];
+  repeated Member members = 1 [(gogoproto.nullable) = false];
 }
 
 message MembershipResponse {
-  repeated Member members = 1 [(gogoproto.nullable) = false];
+  bool success = 1;
+}
+
+message MemberRequest {
+  bool leader = 1;
+  Member member = 2 [(gogoproto.nullable) = false];
+}
+
+message MemberResponse {
+  bool success = 1;
+  Member leader = 2 [(gogoproto.nullable) = false];
 }
 
 message Empty {}

@@ -53,9 +53,9 @@ func DefaultConfig() *Config {
 		MemberId:                uint64(snowflake.Generate()),
 		Address:                 "localhost:4399",
 		MaxLogEntriesPerRequest: 40,
-		HeartbeatInterval:       time.Millisecond * 200,
+		HeartbeatInterval:       time.Millisecond * 100,
 		HeartbeatTimeout:        time.Millisecond * 300,
-		ElectionTimeout:         time.Millisecond * 250,
+		ElectionTimeout:         time.Millisecond * 200,
 		DialTimeout:             time.Millisecond * 300,
 		DialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -65,6 +65,6 @@ func DefaultConfig() *Config {
 		},
 		SnapshotPath:           "./snapshot",
 		LogPath:                "./log",
-		PullMembershipInterval: time.Second,
+		PullMembershipInterval: time.Second * 5,
 	}
 }

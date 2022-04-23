@@ -132,7 +132,7 @@ func (s *Server) Serve(addr string) {
 
 func main() {
 	port := flag.Int("port", 0, "raft server port")
-	addr := flag.String("addr", "localhost:0", "web address")
+	addr := flag.String("addr", "", "web address")
 	existing := flag.String("existing", "", "existing raft member")
 	flag.Parse()
 
@@ -140,6 +140,7 @@ func main() {
 	log.SetLevel(log.INFO)
 
 	config := raft.DefaultConfig()
+	config.MemberId = uint64(*port)
 	config.Address = fmt.Sprintf("0.0.0.0:%d", *port)
 	config.LogPath = fmt.Sprintf("%d", *port)
 	config.URL = `http://` + *addr
@@ -148,6 +149,9 @@ func main() {
 
 	go func() {
 		s.peer = peer
+		if *addr == "" {
+			return
+		}
 		s.Serve(*addr)
 	}()
 	time.Sleep(time.Millisecond * 50)

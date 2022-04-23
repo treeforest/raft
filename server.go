@@ -98,12 +98,6 @@ func (s *server) Start() error {
 		s.loop()
 	}()
 
-	s.routineGroup.Add(1)
-	go func() {
-		defer s.routineGroup.Done()
-		s.pullMembershipTrigger()
-	}()
-
 	return nil
 }
 
@@ -125,73 +119,77 @@ func (s *server) Init() error {
 	return nil
 }
 
-func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (
-	resp *pb.RequestVoteResponse, err error) {
-	currentTerm := s.CurrentTerm()
-	resp = &pb.RequestVoteResponse{
-		Term:        currentTerm,
-		VoteGranted: false,
+func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (*pb.RequestVoteResponse, error) {
+	if req.Term < s.CurrentTerm() {
+		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
 	}
 
-	if req.Term < currentTerm {
-		return
-	}
-
-	if req.Term > currentTerm {
+	if req.Term > s.CurrentTerm() {
+		// 任期比对方小，成为跟随者
 		s.updateCurrentTerm(req.Term, 0)
 	} else if atomic.LoadUint64(&s.votedFor) != 0 && atomic.LoadUint64(&s.votedFor) != req.CandidateId {
-		return
+		// 已投过票，且投票对象不是req.CandidateId
+		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
 	}
 
-	lastIndex, lastTerm := s.log.lastInfo()
-	if lastIndex > req.LastLogIndex || lastTerm > req.LastLogTerm {
-		return
+	lastLogIndex, lastLogTerm := s.log.lastInfo()
+	if lastLogIndex > req.LastLogIndex || lastLogTerm > req.LastLogTerm {
+		// 当前节点的日志更新
+		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
 	}
 
+	// 选票投给 req.CandidateId
 	atomic.SwapUint64(&s.votedFor, req.CandidateId)
 	s.followerHeartbeatChan <- true
-	resp.VoteGranted = true
-	return
+	log.Infof("votedFor: %d", s.votedFor)
+
+	return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: true}, nil
 }
 
-func (s *server) Join(existing []string) {
-	if existing == nil || len(existing) == 0 {
+func (s *server) Join(existing string) {
+	if existing == "" || len(existing) == 0 {
 		return
 	}
 
-	req := &pb.MembershipRequest{
-		Member: pb.Member{
-			Id:      s.config.MemberId,
-			Address: s.config.Address,
-		},
-	}
-
-	for _, addr := range existing {
-		if addr == "" {
-			continue
-		}
-
+	join := func(addr string) *pb.MemberResponse {
 		cc, err := dial(addr, s.config.DialTimeout, s.config.DialOptions)
 		if err != nil {
 			log.Errorf("dial %s failed: %v", addr, err)
-			continue
+			return nil
 		}
 
-		resp, err := pb.NewRaftClient(cc).Membership(context.Background(), req)
+		req := &pb.MemberRequest{
+			Leader: false,
+			Member: pb.Member{Id: s.ID(), Address: s.Address()},
+		}
+
+		resp, err := pb.NewRaftClient(cc).AddMember(context.Background(), req)
 		if err != nil {
-			log.Errorf("send membership request failed: %v", err)
-			continue
+			log.Errorf("send AddMember request failed: %v", err)
+			return nil
 		}
 
-		for _, m := range resp.Members {
-			if _, ok := s.members.Load(m.Id); ok {
-				continue
-			}
-			s.members.Store(m.Id, newMember(m, s))
-		}
-
-		log.Infof("join %s success", addr)
+		return resp
 	}
+
+	resp := join(existing)
+	if resp == nil {
+		return
+	}
+
+	if resp.Success == false {
+		resp = join(resp.Leader.Address)
+		if resp == nil {
+			return
+		}
+
+		if resp.Success == false {
+			log.Info("join cluster failed")
+			return
+		}
+	}
+
+	log.Info("join cluster success")
 }
 
 func (s *server) Do(commandName string, command []byte) (uint64, error) {
@@ -236,10 +234,13 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 		log.Warn("stale term")
 		return resp, nil
 	} else if req.Term == currentTerm {
+		// TODO: 相同任期，都是leader的情况
 		if s.State() == pb.NodeState_Candidate {
 			s.setState(pb.NodeState_Follower)
 		}
+		s.locker.Lock()
 		s.leaderId = req.LeaderId
+		s.locker.Unlock()
 	} else {
 		// update term and leaderId
 		s.updateCurrentTerm(req.Term, req.LeaderId)
@@ -300,7 +301,7 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 
 	// add member
 	for _, mb := range req.Members {
-		s.UpdateMember(&mb)
+		s.addMember(mb)
 	}
 
 	// 创建本地快照
@@ -329,14 +330,45 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 	return
 }
 
-// Membership 成员信息
+// Membership 成员信息,由leader->follower
 func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
 	resp *pb.MembershipResponse, err error) {
-	log.Debug("Membership")
+	for _, m := range req.Members {
+		if m.Id == s.ID() {
+			continue
+		}
+		if _, ok := s.members.Load(m.Id); ok {
+			continue
+		}
+		s.members.Store(m.Id, newMember(m, s))
+	}
+	return &pb.MembershipResponse{Success: true}, nil
+}
 
-	s.UpdateMember(&req.Member)
+// AddMember 添加成员，只能由leader完成
+func (s *server) AddMember(ctx context.Context, req *pb.MemberRequest) (*pb.MemberResponse, error) {
+	if !s.IsLeader() && !req.Leader {
+		return &pb.MemberResponse{
+			Success: false,
+			Leader:  pb.Member{Id: s.LeaderId(), Address: s.LeaderAddress()},
+		}, nil
+	}
 
-	return &pb.MembershipResponse{Members: s.Members()}, nil
+	s.addMember(req.Member)
+	return &pb.MemberResponse{Success: true}, nil
+}
+
+// RemoveMember 移除节点，只能由leader完成
+func (s *server) RemoveMember(ctx context.Context, req *pb.MemberRequest) (*pb.MemberResponse, error) {
+	if !s.IsLeader() && !req.Leader {
+		return &pb.MemberResponse{
+			Success: false,
+			Leader:  pb.Member{Id: s.LeaderId(), Address: s.LeaderAddress()},
+		}, nil
+	}
+
+	s.removeMember(req.Member.Id)
+	return &pb.MemberResponse{Success: true}, nil
 }
 
 // Ping ping message
@@ -354,7 +386,7 @@ func (s *server) Stop() {
 	// 结束运行的事件循环
 	close(s.stopped)
 
-	s.grpcServer.GracefulStop()
+	s.grpcServer.Stop()
 
 	// 等待协程运行结束
 	s.routineGroup.Wait()
@@ -533,7 +565,7 @@ func (s *server) candidateLoop() {
 					defer s.routineGroup.Done()
 					if err := m.sendVoteRequest(req, respChan); err != nil {
 						// 投票时以能连接的节点为目标，采用强一致性方式，不能通信的就移除
-						s.RemoveMember(m.Id)
+						s.removeMember(m.Id)
 					}
 				}(value.(*member))
 				return true
@@ -557,15 +589,18 @@ func (s *server) candidateLoop() {
 		case resp := <-respChan:
 			if resp.VoteGranted && resp.Term == s.CurrentTerm() {
 				votesGranted++
+				log.Infof("votesGranted=%d quorumSize=%d", votesGranted, s.QuorumSize())
 				break
 			}
 			if resp.Term > s.CurrentTerm() {
+				log.Info("resp.Term > s.CurrentTerm")
 				s.updateCurrentTerm(resp.Term, 0)
 			} else {
 				// 节点拒绝了对当前节点的投票
 			}
 		case <-timeoutChan:
 			// 选举超时，开始新一轮选举
+			log.Infof("candidate vote timeout")
 			doVote = true
 		}
 	}
@@ -655,45 +690,73 @@ func (s *server) snapshotLoop() {
 	}
 }
 
-func (s *server) UpdateMember(m *pb.Member) {
-	if s.ID() == m.Id {
+func (s *server) addMember(mem pb.Member) {
+	// 不允许节点加入两次
+	if _, ok := s.members.Load(mem.Id); ok {
 		return
 	}
 
-	if value, ok := s.members.Load(m.Id); ok {
-		mem := value.(*member)
-		if mem.Address == m.Address {
-			return
-		}
-		s.RemoveMember(mem.Id)
+	if mem.Id == s.ID() {
+		return
 	}
 
-	mem := newMember(*m, s)
+	m := newMember(mem, s)
+
 	if s.State() == pb.NodeState_Leader {
-		mem.setPrevLogIndex(s.log.CurrentIndex())
-		mem.startHeartbeat()
+		m.startHeartbeat()
 	}
 
-	s.members.Store(mem.Id, mem)
+	log.Infof("add member %d %s", m.Id, m.Address)
+	s.members.Store(m.Id, m)
+
+	// 将节点加入集群的消息采用 gossip 的方式广播到整个网络
+	if s.IsLeader() {
+		// 发送当前成员信息
+		s.routineGroup.Add(1)
+		go func() {
+			s.routineGroup.Done()
+			_, _ = m.sendMembershipRequest(&pb.MembershipRequest{Members: s.Members()})
+		}()
+
+		// 将新节点加入的信息通知给其它节点
+		req := &pb.MemberRequest{
+			Leader: true,
+			Member: mem,
+		}
+		s.members.Range(func(_, v interface{}) bool {
+			go func() {
+				_ = v.(*member).sendAddMember(req)
+			}()
+			return true
+		})
+	}
 }
 
-func (s *server) RemoveMember(id uint64) {
+func (s *server) removeMember(id uint64) {
 	if s.ID() == id {
 		return
 	}
 
-	if v, ok := s.members.Load(id); ok {
-		if s.State() == pb.NodeState_Leader {
-			m := v.(*member)
-			s.routineGroup.Add(1)
-			go func() {
-				defer s.routineGroup.Done()
-				m.stopHeartbeat(true)
-			}()
-		}
+	val, loaded := s.members.LoadAndDelete(id)
+	if !loaded {
+		return
+	}
 
-		s.members.Delete(id)
-		log.Infof("remove member:%d", id)
+	if s.IsLeader() {
+		m := val.(*member)
+		s.routineGroup.Add(1)
+		go func() {
+			defer s.routineGroup.Done()
+			m.stopHeartbeat(true)
+		}()
+
+		req := &pb.MemberRequest{Leader: true, Member: m.Member}
+		s.members.Range(func(_, v interface{}) bool {
+			go func() {
+				_ = v.(*member).sendRemoveMember(req)
+			}()
+			return true
+		})
 	}
 }
 
@@ -722,32 +785,4 @@ func (s *server) QuorumSize() int {
 
 func (s *server) Self() pb.Member {
 	return pb.Member{Id: s.ID(), Address: s.Address()}
-}
-
-func (s *server) pullMembershipTrigger() {
-	ticker := time.NewTicker(s.config.PullMembershipInterval)
-
-	for {
-		select {
-		case <-s.stopped:
-			return
-		case <-ticker.C:
-			s.members.Range(func(key, value interface{}) bool {
-				m := value.(*member)
-				resp, err := m.sendMembershipRequest(&pb.MembershipRequest{Member: s.Self()})
-
-				if err != nil {
-					s.RemoveMember(m.Id)
-					log.Warnf("pull membership failed: %v", err)
-
-				} else {
-					for _, mem := range resp.Members {
-						s.UpdateMember(&mem)
-					}
-				}
-
-				return false
-			})
-		}
-	}
 }
