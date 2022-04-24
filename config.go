@@ -54,8 +54,8 @@ func DefaultConfig() *Config {
 		Address:                 "localhost:4399",
 		MaxLogEntriesPerRequest: 40,
 		HeartbeatInterval:       time.Millisecond * 100,
-		HeartbeatTimeout:        time.Millisecond * 300,
-		ElectionTimeout:         time.Millisecond * 200,
+		HeartbeatTimeout:        time.Millisecond * 250,
+		ElectionTimeout:         time.Millisecond * 300,
 		DialTimeout:             time.Millisecond * 300,
 		DialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),

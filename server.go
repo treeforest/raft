@@ -234,7 +234,6 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 		log.Warn("stale term")
 		return resp, nil
 	} else if req.Term == currentTerm {
-		// TODO: 相同任期，都是leader的情况
 		if s.State() == pb.NodeState_Candidate {
 			s.setState(pb.NodeState_Follower)
 		}
@@ -251,7 +250,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 	// 2、reply false if log doesn't contain an Entry at prevLogIndex whose
 	// term matches prevLogTerm
 	if err = s.log.truncate(req.PrevLogIndex, req.PrevLogTerm); err != nil {
-		log.Warn(err)
+		log.Debug(err)
 		return resp, nil
 	}
 
@@ -341,6 +340,7 @@ func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
 			continue
 		}
 		s.members.Store(m.Id, newMember(m, s))
+		log.Infof("add member %d %s", m.Id, m.Address)
 	}
 	return &pb.MembershipResponse{Success: true}, nil
 }
@@ -383,6 +383,8 @@ func (s *server) Stop() {
 		return
 	}
 
+	s.leaveCluster()
+
 	// 结束运行的事件循环
 	close(s.stopped)
 
@@ -394,7 +396,31 @@ func (s *server) Stop() {
 	s.log.close()
 	s.setState(pb.NodeState_Stopped)
 
-	log.Info("state")
+	log.Info("stopped")
+}
+
+// leaveCluster 离开集群
+func (s *server) leaveCluster() {
+	if s.IsLeader() {
+		s.members.Range(func(key, value interface{}) bool {
+			m := value.(*member)
+			_ = m.sendRemoveMember(&pb.MemberRequest{Leader: true, Member: s.Self()})
+			return true
+		})
+		return
+	}
+
+	if s.State() == pb.NodeState_Candidate {
+		return
+	}
+
+	value, ok := s.members.Load(s.leaderId)
+	if !ok {
+		return
+	}
+
+	leader := value.(*member)
+	_ = leader.sendRemoveMember(&pb.MemberRequest{Leader: false, Member: s.Self()})
 }
 
 func (s *server) IsLeader() bool {
@@ -649,6 +675,7 @@ func (s *server) leaderLoop() {
 
 		case resp := <-s.leaderRespChan:
 			if resp.Term > s.CurrentTerm() {
+				// 主动退位
 				s.updateCurrentTerm(resp.Term, 0)
 				break
 			}
@@ -703,6 +730,7 @@ func (s *server) addMember(mem pb.Member) {
 	m := newMember(mem, s)
 
 	if s.State() == pb.NodeState_Leader {
+		m.setPrevLogIndex(s.log.CurrentIndex())
 		m.startHeartbeat()
 	}
 
@@ -741,6 +769,7 @@ func (s *server) removeMember(id uint64) {
 	if !loaded {
 		return
 	}
+	log.Infof("remove member %d", id)
 
 	if s.IsLeader() {
 		m := val.(*member)

@@ -219,7 +219,7 @@ func (l *Log) getEntriesAfter(index uint64, maxLogEntriesPerRequest uint64) ([]p
 
 	// Return an error if the index doesn't exist.
 	if index > (uint64(len(l.entries)) + l.startIndex) {
-		panic(fmt.Sprintf("raft: Index is beyond end of log: %v %v", len(l.entries), index))
+		panic(fmt.Sprintf("index is beyond end of log: %v %v", len(l.entries), index))
 	}
 
 	// If we're going from the beginning of the log then return the whole log.
@@ -325,38 +325,37 @@ func (l *Log) flushCommitIndex() {
 	_ = l.levelDB.Put([]byte(commitIndexKey), uint64ToBytes(l.commitIndex), nil)
 }
 
-// Truncates the log to the given index and term. This only works if the log
-// at the index has not been committed.
+// truncate 截断index之后的未提交的所有日志条目，如果已提交或超出日志范围，则返回错误
 func (l *Log) truncate(index uint64, term uint64) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 	log.Debug("log.truncate: ", index)
 
-	// Do not allow committed entries to be truncated.
+	// 不允许截断已经提交的日志，即要求 index >= commitIndex
 	if index < l.commitIndex {
 		log.Debug("log.truncate.before")
-		return fmt.Errorf("raft.Log: Index is already committed (%v): (IDX=%v, TERM=%v)", l.commitIndex, index, term)
+		return fmt.Errorf("index is already committed (%v): (IDX=%v, TERM=%v)", l.commitIndex, index, term)
 	}
 
-	// Do not truncate past end of entries.
+	// 要截断的日志超出当前日志范围，返回错误
 	if index > l.startIndex+uint64(len(l.entries)) {
 		log.Debug("log.truncate.after")
-		return fmt.Errorf("raft.Log: Entry index does not exist (MAX=%v): (IDX=%v, TERM=%v)", len(l.entries), index, term)
+		return fmt.Errorf("entry index does not exist (MAX=%v): (IDX=%v, TERM=%v)", len(l.entries), index, term)
 	}
 
-	// If we're truncating everything then just clear the entries.
+	// 开始截断操作
 	if index == l.startIndex {
 		log.Debug("log.truncate.clear")
 		l.entries = []pb.LogEntry{}
 	} else {
-		// Do not truncate if the Entry at index does not have the matching term.
+		// 相同索引，却是不同任期，则不进行截断，并返回错误
 		entry := l.entries[index-l.startIndex-1]
 		if len(l.entries) > 0 && entry.Term != term {
 			log.Debug("log.truncate.termMismatch")
 			return fmt.Errorf("entry at index does not have matching term (%v): (IDX=%v, TERM=%v)", entry.Term, index, term)
 		}
 
-		// otherwise, truncate up to the desired Entry.
+		// 截断所要求的条目
 		if index < l.startIndex+uint64(len(l.entries)) {
 			log.Debug("log.truncate.finish")
 			for i := index - l.startIndex; i < uint64(len(l.entries)); i++ {

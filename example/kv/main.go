@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"time"
 )
@@ -161,7 +160,7 @@ func main() {
 	}
 
 	if *existing != "" {
-		peer.Join(strings.Split(*existing, ","))
+		peer.Join(*existing)
 	}
 
 	done := make(chan os.Signal, 1)
