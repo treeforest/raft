@@ -192,9 +192,9 @@ func (s *server) Join(existing string) {
 	log.Info("join cluster success")
 }
 
-func (s *server) Do(commandName string, command []byte) (uint64, error) {
-	if s.state != pb.NodeState_Leader {
-		return 0, NotLeader
+func (s *server) Do(commandName string, command []byte) (*pb.LogEntry, error) {
+	if !s.IsLeader() {
+		return nil, NotLeader
 	}
 
 	entry := &pb.LogEntry{
@@ -204,35 +204,44 @@ func (s *server) Do(commandName string, command []byte) (uint64, error) {
 		Command:     command,
 	}
 
-	if err := s.log.writeEntry(entry); err != nil {
-		return 0, err
-	}
+	sub := s.log.Subscribe(entry.Index, s.config.SubscribeTTL)
 
-	// TODO: 对 index 的提交进行监听
-	return entry.Index, nil
+	s.locker.Lock()
+	if err := s.log.writeEntry(entry); err != nil {
+		s.locker.Unlock()
+		return nil, err
+	}
+	if s.config.ReplicationType == Asynchronous {
+		// 异步复制，leader直接提交日志，并返回结果
+		_ = s.log.setCommitIndex(entry.Index)
+	}
+	s.locker.Unlock()
+
+	_, err := sub.Listen()
+	if err != nil {
+		return nil, err
+	}
+	return entry, nil
 }
 
 // AppendEntries 用于leader进行日志复制与心跳检测
-func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest) (
-	resp *pb.AppendEntriesResponse, err error) {
+func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest) (*pb.AppendEntriesResponse, error) {
 	log.Debugf("AppendEntries, request: %v", *req)
 
 	if !s.Running() {
 		return nil, StopError
 	}
 
-	resp = &pb.AppendEntriesResponse{
-		Term:        s.CurrentTerm(),
-		Index:       s.log.CurrentIndex(),
-		CommitIndex: s.log.CommitIndex(),
-		Success:     false,
-	}
-
 	// 1、reply false if term < currentTerm
 	currentTerm := s.CurrentTerm()
 	if req.Term < currentTerm {
 		log.Warn("stale term")
-		return resp, nil
+		return &pb.AppendEntriesResponse{
+			Term:        s.CurrentTerm(),
+			Index:       s.log.CurrentIndex(),
+			CommitIndex: s.log.CommitIndex(),
+			Success:     false,
+		}, nil
 	} else if req.Term == currentTerm {
 		if s.State() == pb.NodeState_Candidate {
 			s.setState(pb.NodeState_Follower)
@@ -249,27 +258,46 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 
 	// 2、reply false if log doesn't contain an Entry at prevLogIndex whose
 	// term matches prevLogTerm
-	if err = s.log.truncate(req.PrevLogIndex, req.PrevLogTerm); err != nil {
+	if err := s.log.truncate(req.PrevLogIndex, req.PrevLogTerm); err != nil {
 		log.Debug(err)
-		return resp, nil
+		return &pb.AppendEntriesResponse{
+			Term:        s.CurrentTerm(),
+			Index:       s.log.CurrentIndex(),
+			CommitIndex: s.log.CommitIndex(),
+			Success:     false,
+		}, nil
 	}
 
 	// 3、if an existing Entry conflicts with a new one(same index but
 	// different terms), delete the existing Entry and all the follow it.
 	// 4、append any new entries not already in the log
-	if err = s.log.appendEntries(req.Entries); err != nil {
+	if err := s.log.appendEntries(req.Entries); err != nil {
 		log.Warn(err)
-		return resp, nil
+		return &pb.AppendEntriesResponse{
+			Term:        s.CurrentTerm(),
+			Index:       s.log.CurrentIndex(),
+			CommitIndex: s.log.CommitIndex(),
+			Success:     false,
+		}, nil
 	}
 
-	if err = s.log.setCommitIndex(req.CommitIndex); err != nil {
+	if err := s.log.setCommitIndex(req.CommitIndex); err != nil {
 		log.Warn(err)
-		return resp, nil
+		return &pb.AppendEntriesResponse{
+			Term:        s.CurrentTerm(),
+			Index:       s.log.CurrentIndex(),
+			CommitIndex: s.log.CommitIndex(),
+			Success:     false,
+		}, nil
 	}
 
 	// 若返回成功，则代表leader和follower的日志条目一定相同
-	resp.Success = true
-	return resp, nil
+	return &pb.AppendEntriesResponse{
+		Term:        s.CurrentTerm(),
+		Index:       s.log.CurrentIndex(),
+		CommitIndex: s.log.CommitIndex(),
+		Success:     true,
+	}, nil
 }
 
 func (s *server) Snapshot(ctx context.Context, req *pb.SnapshotRequest) (
@@ -288,11 +316,10 @@ func (s *server) Snapshot(ctx context.Context, req *pb.SnapshotRequest) (
 	return
 }
 
-func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryRequest) (
-	resp *pb.SnapshotRecoveryResponse, err error) {
+func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryRequest) (*pb.SnapshotRecoveryResponse, error) {
 	log.Debug("SnapshotRecovery")
 
-	if err = s.stateMachine.Recovery(req.State); err != nil {
+	if err := s.stateMachine.Recovery(req.State); err != nil {
 		log.Fatal("cannot recover from previous state")
 	}
 
@@ -310,7 +337,7 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 		State:     req.State,
 	}
 	data, _ := s.pendingSnapshot.Marshal()
-	err = ioutil.WriteFile(s.config.SnapshotPath, data, 777)
+	err := ioutil.WriteFile(s.config.SnapshotPath, data, 777)
 	if err == nil {
 		s.snapshot = s.pendingSnapshot
 		s.pendingSnapshot = nil
@@ -319,19 +346,17 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 	// 清楚 LastIncludedIndex 之前的条目
 	_ = s.log.compact(req.LastIndex, req.LastTerm)
 
-	resp = &pb.SnapshotRecoveryResponse{
+	s.updateCurrentTerm(req.LastTerm, req.LeaderId)
+
+	return &pb.SnapshotRecoveryResponse{
 		Term:        s.CurrentTerm(),
 		Success:     true,
 		CommitIndex: s.log.CommitIndex(),
-	}
-
-	s.updateCurrentTerm(req.LastTerm, req.LeaderId)
-	return
+	}, nil
 }
 
 // Membership 成员信息,由leader->follower
-func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (
-	resp *pb.MembershipResponse, err error) {
+func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (*pb.MembershipResponse, error) {
 	for _, m := range req.Members {
 		if m.Id == s.ID() {
 			continue
@@ -686,21 +711,35 @@ func (s *server) leaderLoop() {
 				break
 			}
 
-			// 检查超过半数的条件
-			var indices []uint64
-			indices = append(indices, s.log.CurrentIndex())
-			s.members.Range(func(key, value interface{}) bool {
-				indices = append(indices, value.(*member).getPrevLogIndex())
-				return true
-			})
-			sort.Sort(sort.Reverse(Uint64Slice(indices)))
+			switch s.config.ReplicationType {
+			case Synchronous:
+				// 检查超过半数的条件
+				var indices []uint64
+				indices = append(indices, s.log.CurrentIndex())
+				s.members.Range(func(key, value interface{}) bool {
+					indices = append(indices, value.(*member).getPrevLogIndex())
+					return true
+				})
+				sort.Sort(sort.Reverse(Uint64Slice(indices))) // 从大到小排序
 
-			commitIndex := indices[s.QuorumSize()-1]
-			if commitIndex > s.log.CommitIndex() {
+				commitIndex := indices[s.QuorumSize()-1]
+				if commitIndex > s.log.CommitIndex() {
+					s.locker.Lock()
+					// 更新 commitIndex
+					_ = s.log.setCommitIndex(commitIndex)
+					s.locker.Unlock()
+					// log.Infof("update commitIndex: %d", commitIndex)
+				}
+
+			case Semisynchronous:
 				s.locker.Lock()
-				// 更新 commitIndex
-				_ = s.log.setCommitIndex(commitIndex)
+				_ = s.log.setCommitIndex(resp.Index)
 				s.locker.Unlock()
+
+			case Asynchronous:
+
+			default:
+				log.Error("unknown replication type")
 			}
 		}
 	}

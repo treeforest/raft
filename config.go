@@ -44,8 +44,11 @@ type Config struct {
 	// LogPath 日志文件路径
 	LogPath string
 
-	// PullMembershipInterval 同步成员信息的间隔时间
-	PullMembershipInterval time.Duration
+	// SubscribeTTL 订阅事件的超时时间
+	SubscribeTTL time.Duration
+
+	// ReplicationType 日志复制类型
+	ReplicationType ReplicationType
 }
 
 func DefaultConfig() *Config {
@@ -54,7 +57,7 @@ func DefaultConfig() *Config {
 		Address:                 "localhost:4399",
 		MaxLogEntriesPerRequest: 40,
 		HeartbeatInterval:       time.Millisecond * 100,
-		HeartbeatTimeout:        time.Millisecond * 250,
+		HeartbeatTimeout:        time.Millisecond * 300,
 		ElectionTimeout:         time.Millisecond * 300,
 		DialTimeout:             time.Millisecond * 300,
 		DialOptions: []grpc.DialOption{
@@ -63,8 +66,9 @@ func DefaultConfig() *Config {
 		ServerOptions: []grpc.ServerOption{
 			grpc.Creds(insecure.NewCredentials()),
 		},
-		SnapshotPath:           "./snapshot",
-		LogPath:                "./log",
-		PullMembershipInterval: time.Second * 5,
+		SnapshotPath:    "./snapshot",
+		LogPath:         "./log",
+		SubscribeTTL:    time.Second * 3,
+		ReplicationType: Asynchronous,
 	}
 }

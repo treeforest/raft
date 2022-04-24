@@ -8,7 +8,9 @@ import (
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft/pb"
 	"os"
+	"strconv"
 	"sync"
+	"time"
 )
 
 const (
@@ -18,6 +20,8 @@ const (
 	lastEntryIndex = "__last_entry_key__"
 	currentTermKey = "__latest_term_key__"
 )
+
+type notify []<-chan struct{}
 
 // Log a log is a collection of log entries that are persisted to durable storage.
 type Log struct {
@@ -31,6 +35,7 @@ type Log struct {
 	startTerm   uint64
 	currentTerm uint64
 	initialized bool
+	pubsub      *PubSub
 }
 
 // newLog creates a new log.
@@ -38,8 +43,17 @@ func newLog(path string, applyFunc func(string, []byte)) *Log {
 	l := &Log{
 		ApplyFunc: applyFunc,
 		entries:   make([]pb.LogEntry, 0),
+		pubsub:    NewPubSub(),
 	}
 	return l
+}
+
+func (l *Log) Subscribe(index uint64, ttl time.Duration) Subscription {
+	return l.pubsub.Subscribe(strconv.FormatUint(index, 10), ttl)
+}
+
+func (l *Log) publish(index uint64) {
+	_ = l.pubsub.Publish(strconv.FormatUint(index, 10), struct{}{})
 }
 
 // CommitIndex the last committed index in the log.
@@ -310,6 +324,9 @@ func (l *Log) setCommitIndex(index uint64) error {
 		// Update commit index.
 		l.commitIndex = entry.Index
 		l.flushCommitIndex()
+		log.Infof("update commitIndex: %d", l.commitIndex)
+
+		l.publish(entry.Index)
 
 		// Apply the changes to the state machine and store the error code.
 		l.ApplyFunc(entry.CommandName, entry.Command)

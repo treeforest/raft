@@ -86,13 +86,13 @@ func (s *Server) Serve(addr string) {
 		cmd.Value = c.Query("value")
 		data, _ := json.Marshal(cmd)
 
-		index, err := s.peer.Do(SET, data)
+		entry, err := s.peer.Do(SET, data)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": -1, "error": err.Error()})
 			return
 		}
 
-		log.Info("index=", index)
+		log.Info("index=", entry.Index)
 		c.JSON(http.StatusOK, gin.H{"code": 0})
 	})
 	r.POST("/del", func(c *gin.Context) {
@@ -105,13 +105,13 @@ func (s *Server) Serve(addr string) {
 		cmd.Key = c.Query("key")
 		data, _ := json.Marshal(cmd)
 
-		index, err := s.peer.Do(SET, data)
+		entry, err := s.peer.Do(SET, data)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": -1, "error": err.Error()})
 			return
 		}
 
-		log.Info("index=", index)
+		log.Info("index=", entry.Index)
 		c.JSON(http.StatusOK, gin.H{"code": 0})
 	})
 	r.GET("/get", func(c *gin.Context) {
