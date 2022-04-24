@@ -125,7 +125,7 @@ func (m *member) sendVoteRequest(req *pb.RequestVoteRequest, c chan *pb.RequestV
 	return nil
 }
 
-func (m *member) sendSnapshotRequest() error {
+func (m *member) sendSnapshotAskRequest() error {
 	client, err := m.client()
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (m *member) sendSnapshotRequest() error {
 
 	snapshot := m.server.snapshot
 
-	resp, err := client.Snapshot(context.Background(), &pb.SnapshotRequest{
+	resp, err := client.SnapshotAsk(context.Background(), &pb.SnapshotAskRequest{
 		LeaderId:  m.server.ID(),
 		LastIndex: snapshot.LastIndex,
 		LastTerm:  snapshot.LastTerm,
@@ -146,7 +146,7 @@ func (m *member) sendSnapshotRequest() error {
 	m.setLastActivity(time.Now())
 
 	if resp.Success {
-		_ = m.sendSnapshotRecoveryRequest(snapshot)
+		_ = m.sendSnapshotRecoveryRequest(&snapshot.Snapshot)
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func (m *member) sendSnapshotRecoveryRequest(snapshot *pb.Snapshot) error {
 	return nil
 }
 
-func (m *member) sendAddMember(req *pb.MemberRequest) error {
+func (m *member) sendAddMemberRequest(req *pb.MemberRequest) error {
 	client, err := m.client()
 	if err != nil {
 		return err
@@ -195,7 +195,7 @@ func (m *member) sendAddMember(req *pb.MemberRequest) error {
 	return err
 }
 
-func (m *member) sendRemoveMember(req *pb.MemberRequest) error {
+func (m *member) sendRemoveMemberRequest(req *pb.MemberRequest) error {
 	client, err := m.client()
 	if err != nil {
 		return err
@@ -308,7 +308,7 @@ func (m *member) flush() (err error) {
 			Entries:      entries,
 		})
 	} else {
-		err = m.sendSnapshotRequest()
+		err = m.sendSnapshotAskRequest()
 	}
 	return
 }

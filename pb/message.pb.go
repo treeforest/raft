@@ -297,8 +297,8 @@ func (m *AppendEntriesResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_AppendEntriesResponse proto.InternalMessageInfo
 
-// SnapshotRequest 询问是否需要快照恢复
-type SnapshotRequest struct {
+// SnapshotAskRequest 询问是否需要快照恢复
+type SnapshotAskRequest struct {
 	LeaderId             uint64   `protobuf:"varint,1,opt,name=leaderId,proto3" json:"leaderId,omitempty"`
 	LastIndex            uint64   `protobuf:"varint,2,opt,name=lastIndex,proto3" json:"lastIndex,omitempty"`
 	LastTerm             uint64   `protobuf:"varint,3,opt,name=lastTerm,proto3" json:"lastTerm,omitempty"`
@@ -307,18 +307,18 @@ type SnapshotRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SnapshotRequest) Reset()         { *m = SnapshotRequest{} }
-func (m *SnapshotRequest) String() string { return proto.CompactTextString(m) }
-func (*SnapshotRequest) ProtoMessage()    {}
-func (*SnapshotRequest) Descriptor() ([]byte, []int) {
+func (m *SnapshotAskRequest) Reset()         { *m = SnapshotAskRequest{} }
+func (m *SnapshotAskRequest) String() string { return proto.CompactTextString(m) }
+func (*SnapshotAskRequest) ProtoMessage()    {}
+func (*SnapshotAskRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{5}
 }
-func (m *SnapshotRequest) XXX_Unmarshal(b []byte) error {
+func (m *SnapshotAskRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SnapshotRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SnapshotAskRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SnapshotRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_SnapshotAskRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -328,19 +328,19 @@ func (m *SnapshotRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *SnapshotRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SnapshotRequest.Merge(m, src)
+func (m *SnapshotAskRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SnapshotAskRequest.Merge(m, src)
 }
-func (m *SnapshotRequest) XXX_Size() int {
+func (m *SnapshotAskRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *SnapshotRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_SnapshotRequest.DiscardUnknown(m)
+func (m *SnapshotAskRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SnapshotAskRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SnapshotRequest proto.InternalMessageInfo
+var xxx_messageInfo_SnapshotAskRequest proto.InternalMessageInfo
 
-type SnapshotResponse struct {
+type SnapshotAskResponse struct {
 	// success 如果需要快照恢复，则返回true
 	Success              bool     `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -348,18 +348,18 @@ type SnapshotResponse struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SnapshotResponse) Reset()         { *m = SnapshotResponse{} }
-func (m *SnapshotResponse) String() string { return proto.CompactTextString(m) }
-func (*SnapshotResponse) ProtoMessage()    {}
-func (*SnapshotResponse) Descriptor() ([]byte, []int) {
+func (m *SnapshotAskResponse) Reset()         { *m = SnapshotAskResponse{} }
+func (m *SnapshotAskResponse) String() string { return proto.CompactTextString(m) }
+func (*SnapshotAskResponse) ProtoMessage()    {}
+func (*SnapshotAskResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{6}
 }
-func (m *SnapshotResponse) XXX_Unmarshal(b []byte) error {
+func (m *SnapshotAskResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SnapshotResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *SnapshotAskResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SnapshotResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_SnapshotAskResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -369,17 +369,17 @@ func (m *SnapshotResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *SnapshotResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SnapshotResponse.Merge(m, src)
+func (m *SnapshotAskResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SnapshotAskResponse.Merge(m, src)
 }
-func (m *SnapshotResponse) XXX_Size() int {
+func (m *SnapshotAskResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *SnapshotResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_SnapshotResponse.DiscardUnknown(m)
+func (m *SnapshotAskResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_SnapshotAskResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SnapshotResponse proto.InternalMessageInfo
+var xxx_messageInfo_SnapshotAskResponse proto.InternalMessageInfo
 
 // SnapshotRecoveryRequest 快照恢复，leader发送给follower
 type SnapshotRecoveryRequest struct {
@@ -716,6 +716,7 @@ type Snapshot struct {
 	LastIndex            uint64   `protobuf:"varint,1,opt,name=lastIndex,proto3" json:"lastIndex,omitempty"`
 	LastTerm             uint64   `protobuf:"varint,2,opt,name=lastTerm,proto3" json:"lastTerm,omitempty"`
 	State                []byte   `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	Members              []Member `protobuf:"bytes,4,rep,name=members,proto3" json:"members"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -761,8 +762,8 @@ func init() {
 	proto.RegisterType((*LogEntry)(nil), "LogEntry")
 	proto.RegisterType((*AppendEntriesRequest)(nil), "AppendEntriesRequest")
 	proto.RegisterType((*AppendEntriesResponse)(nil), "AppendEntriesResponse")
-	proto.RegisterType((*SnapshotRequest)(nil), "SnapshotRequest")
-	proto.RegisterType((*SnapshotResponse)(nil), "SnapshotResponse")
+	proto.RegisterType((*SnapshotAskRequest)(nil), "SnapshotAskRequest")
+	proto.RegisterType((*SnapshotAskResponse)(nil), "SnapshotAskResponse")
 	proto.RegisterType((*SnapshotRecoveryRequest)(nil), "SnapshotRecoveryRequest")
 	proto.RegisterType((*SnapshotRecoveryResponse)(nil), "SnapshotRecoveryResponse")
 	proto.RegisterType((*Member)(nil), "Member")
@@ -777,59 +778,60 @@ func init() {
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 829 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x6e, 0xe4, 0x44,
-	0x10, 0x76, 0x7b, 0x9c, 0xf9, 0xa9, 0x99, 0x6c, 0xbc, 0x9d, 0xec, 0x62, 0x2c, 0x64, 0xa2, 0x96,
-	0x80, 0x05, 0xa1, 0x46, 0x84, 0x03, 0x12, 0x70, 0x60, 0x17, 0x2d, 0x68, 0x44, 0x88, 0xc0, 0x41,
-	0x1c, 0xf6, 0xe6, 0x4c, 0x37, 0x5e, 0xa3, 0xb1, 0xdb, 0xd8, 0xbd, 0x03, 0x41, 0xe2, 0x1d, 0x38,
-	0xf2, 0x08, 0x9c, 0x38, 0xf3, 0x08, 0x39, 0x72, 0xe5, 0x82, 0x36, 0xc3, 0x0b, 0xf0, 0x08, 0xc8,
-	0x6d, 0xf7, 0x4c, 0xdb, 0x33, 0x99, 0x70, 0xd9, 0xd3, 0xf4, 0x57, 0x5d, 0x5d, 0xf5, 0xd5, 0x57,
-	0xd5, 0xed, 0x81, 0xfd, 0x94, 0x97, 0x65, 0x14, 0x73, 0x9a, 0x17, 0x42, 0x0a, 0xff, 0x28, 0x16,
-	0xb1, 0x50, 0xcb, 0x77, 0xaa, 0x55, 0x6d, 0x25, 0xbf, 0x20, 0xc0, 0x21, 0xff, 0xfe, 0x19, 0x2f,
-	0xe5, 0x37, 0x42, 0xf2, 0x66, 0x89, 0x31, 0x38, 0x92, 0x17, 0xa9, 0x87, 0x8e, 0xd1, 0x03, 0x27,
-	0x54, 0x6b, 0x7c, 0x0c, 0xe3, 0x59, 0x94, 0xb1, 0x84, 0x45, 0x92, 0x4f, 0x99, 0x67, 0xab, 0x2d,
-	0xd3, 0x54, 0x79, 0xcc, 0xa3, 0x52, 0x9e, 0x8a, 0xf8, 0xeb, 0xea, 0x70, 0xaf, 0xf6, 0x30, 0x4c,
-	0x98, 0xc0, 0xa4, 0x81, 0xd3, 0x8c, 0xf1, 0x1f, 0x3d, 0x47, 0xb9, 0xb4, 0x6c, 0xe4, 0x73, 0x38,
-	0x6c, 0x31, 0x2a, 0x73, 0x91, 0x95, 0xfc, 0x26, 0x4a, 0x0b, 0x21, 0xf9, 0x67, 0x45, 0x94, 0x49,
-	0x5e, 0x53, 0x1a, 0x86, 0xa6, 0x89, 0xe4, 0x30, 0x3c, 0x15, 0xf1, 0xe3, 0x4c, 0x16, 0x97, 0xf8,
-	0x08, 0xf6, 0x12, 0x95, 0xb5, 0x0e, 0x51, 0x83, 0x55, 0x5c, 0xbb, 0x53, 0xaa, 0x48, 0xd3, 0x28,
-	0x63, 0x67, 0x51, 0xca, 0x55, 0x21, 0xa3, 0xd0, 0x34, 0x61, 0x0f, 0x06, 0x0d, 0x54, 0x35, 0x4c,
-	0x42, 0x0d, 0xc9, 0x5f, 0x08, 0x8e, 0x1e, 0xe6, 0x39, 0xcf, 0x58, 0x95, 0x35, 0xe1, 0xe5, 0x2e,
-	0x4d, 0x7d, 0x18, 0xce, 0x79, 0xc4, 0x78, 0xb1, 0x12, 0x74, 0x85, 0x2b, 0x12, 0x79, 0xc1, 0x17,
-	0x1d, 0x35, 0x0d, 0x53, 0xa5, 0x66, 0x03, 0x5b, 0x6a, 0x9a, 0x36, 0x5d, 0x4a, 0x22, 0x6b, 0x97,
-	0xbd, 0xa6, 0x6b, 0x6b, 0x13, 0x7e, 0x13, 0x06, 0xbc, 0x66, 0xea, 0xf5, 0x8f, 0x7b, 0x0f, 0xc6,
-	0x27, 0x23, 0xaa, 0x25, 0x7b, 0xe4, 0x5c, 0xfd, 0xfd, 0xaa, 0x15, 0xea, 0x7d, 0xf2, 0x33, 0xdc,
-	0xeb, 0x94, 0xb6, 0xa3, 0x39, 0x2b, 0xb9, 0x6d, 0x53, 0xee, 0x0e, 0x9f, 0xde, 0x26, 0x1f, 0x0f,
-	0x06, 0xe5, 0xb3, 0xd9, 0x8c, 0x97, 0xa5, 0x2a, 0x68, 0x18, 0x6a, 0x48, 0x62, 0x38, 0x38, 0xcf,
-	0xa2, 0xbc, 0x7c, 0x2a, 0xa4, 0x16, 0xd5, 0x14, 0x10, 0x75, 0x04, 0x7c, 0x05, 0x46, 0xd5, 0x60,
-	0x4d, 0x0d, 0x12, 0x6b, 0x83, 0x3a, 0x19, 0x95, 0xd2, 0xd0, 0x76, 0x85, 0xc9, 0xdb, 0xe0, 0xae,
-	0x13, 0x35, 0x25, 0x1a, 0xb4, 0x50, 0x9b, 0xd6, 0xef, 0x08, 0x5e, 0x5a, 0xbb, 0xcf, 0xc4, 0x82,
-	0x17, 0x97, 0x2f, 0x94, 0x1f, 0x7e, 0x03, 0x06, 0x29, 0x4f, 0x2f, 0x78, 0x51, 0x49, 0x54, 0xb5,
-	0x6c, 0x40, 0xbf, 0x50, 0x58, 0x37, 0xac, 0xd9, 0xad, 0x7a, 0x50, 0xca, 0x48, 0x72, 0xd5, 0xf7,
-	0x49, 0x58, 0x03, 0xf2, 0x1d, 0x78, 0x9b, 0x7c, 0x77, 0x74, 0xd2, 0x28, 0xdd, 0x6e, 0x95, 0x7e,
-	0x7b, 0x37, 0xc9, 0x09, 0xf4, 0x6b, 0x6a, 0xf8, 0x0e, 0xd8, 0x89, 0x16, 0xc1, 0x4e, 0x58, 0x15,
-	0x35, 0x62, 0xac, 0xd0, 0x51, 0x47, 0xa1, 0x86, 0xe4, 0x23, 0xb8, 0x5b, 0x9f, 0x29, 0x9f, 0x26,
-	0xb9, 0x56, 0xd2, 0xa8, 0x19, 0xed, 0xaa, 0x99, 0x50, 0xc0, 0xe6, 0xe9, 0x5b, 0xdb, 0x77, 0x06,
-	0xfb, 0xb5, 0xbf, 0xce, 0x74, 0x1f, 0xfa, 0x75, 0x8f, 0x1a, 0xcf, 0x06, 0xe1, 0xd7, 0xa0, 0x5f,
-	0xe7, 0x50, 0x7c, 0x37, 0x08, 0x34, 0x9b, 0xe4, 0x2b, 0xb8, 0xa3, 0xe3, 0xdd, 0x96, 0xbb, 0x0a,
-	0xd9, 0xa4, 0xda, 0x1e, 0xb2, 0xde, 0x24, 0x03, 0xd8, 0x7b, 0x9c, 0xe6, 0xf2, 0x92, 0x3c, 0x81,
-	0xa1, 0xee, 0x5c, 0x7b, 0x7c, 0xd0, 0xae, 0xf1, 0xb1, 0x3b, 0xe3, 0xb3, 0x9a, 0x8a, 0x9e, 0x31,
-	0x15, 0x6f, 0x31, 0x18, 0x9d, 0x09, 0xc6, 0xcf, 0x2b, 0x80, 0xc7, 0x30, 0x38, 0x97, 0x22, 0xcf,
-	0x39, 0x73, 0x2d, 0x7c, 0x00, 0xe3, 0x69, 0x96, 0xc8, 0x24, 0x9a, 0x27, 0x3f, 0x71, 0xe6, 0x22,
-	0x0c, 0xd0, 0x3f, 0x55, 0xcc, 0x5c, 0x1b, 0x4f, 0x60, 0xf8, 0xa9, 0x98, 0xcf, 0xc5, 0x0f, 0xbc,
-	0x70, 0x7b, 0x78, 0x1f, 0x46, 0x9f, 0xe8, 0x2f, 0x82, 0xeb, 0x60, 0x17, 0x26, 0x9a, 0xaf, 0x4c,
-	0xb2, 0xd8, 0xdd, 0x3b, 0xf9, 0xa3, 0x07, 0x4e, 0x18, 0x7d, 0x2b, 0xf1, 0x07, 0x30, 0x36, 0x9e,
-	0x79, 0x7c, 0x48, 0x37, 0x3f, 0x43, 0xfe, 0x11, 0xdd, 0xf2, 0x25, 0x20, 0x16, 0xfe, 0x18, 0xf6,
-	0x5b, 0xef, 0x10, 0xbe, 0x47, 0xb7, 0x3d, 0xb9, 0xfe, 0x7d, 0xba, 0xf5, 0xb9, 0x22, 0x16, 0x7e,
-	0xd7, 0x10, 0xd2, 0xa5, 0x9d, 0x57, 0xc5, 0xbf, 0x4b, 0xbb, 0xd7, 0x9f, 0x58, 0x78, 0x6a, 0x3e,
-	0x0a, 0xf5, 0xad, 0xc1, 0x1e, 0xbd, 0xe1, 0xe2, 0xfb, 0x2f, 0xd3, 0x9b, 0xae, 0x18, 0xb1, 0xf0,
-	0xfb, 0x00, 0xeb, 0x11, 0xc5, 0x98, 0x6e, 0x4c, 0xbb, 0x7f, 0x48, 0x37, 0x67, 0x98, 0x58, 0x98,
-	0xc2, 0xe8, 0x21, 0x63, 0xfa, 0x42, 0xd1, 0xd6, 0xdc, 0xfa, 0x07, 0xb4, 0x3d, 0x77, 0xaa, 0xcc,
-	0x49, 0xc8, 0x53, 0xb1, 0xe0, 0xff, 0xff, 0x88, 0x07, 0xce, 0x97, 0x49, 0x16, 0xe3, 0x3e, 0x55,
-	0x23, 0xe7, 0x37, 0xbf, 0xc4, 0x7a, 0xf4, 0xfa, 0xd5, 0x75, 0x60, 0x3d, 0xbf, 0x0e, 0xd0, 0xbf,
-	0xd7, 0x01, 0xfa, 0x6d, 0x19, 0xa0, 0xab, 0x65, 0x80, 0xfe, 0x5c, 0x06, 0xe8, 0xf9, 0x32, 0x40,
-	0xbf, 0xfe, 0x13, 0x58, 0x4f, 0x1c, 0xfa, 0x61, 0x7e, 0x71, 0xd1, 0x57, 0x7f, 0x2d, 0xde, 0xfb,
-	0x2f, 0x00, 0x00, 0xff, 0xff, 0x6c, 0x51, 0x68, 0x5d, 0x81, 0x08, 0x00, 0x00,
+	// 840 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x8e, 0xe3, 0x44,
+	0x10, 0x76, 0x3b, 0xce, 0x5f, 0x25, 0xd9, 0x35, 0x9d, 0xec, 0x62, 0x2c, 0x64, 0x46, 0x2d, 0x01,
+	0x0b, 0x87, 0x5e, 0x31, 0x1c, 0x90, 0x80, 0x03, 0xb3, 0x68, 0x41, 0x11, 0xc3, 0x08, 0x3c, 0x88,
+	0x03, 0x37, 0x4f, 0xba, 0xc9, 0x7a, 0x89, 0xdd, 0xc6, 0xee, 0x0d, 0x0c, 0x12, 0x27, 0x5e, 0x80,
+	0x23, 0x8f, 0xc0, 0x89, 0x77, 0xe0, 0x36, 0x47, 0xae, 0x5c, 0xd0, 0x4e, 0x78, 0x01, 0x1e, 0x01,
+	0xb9, 0xed, 0xce, 0xb4, 0x93, 0x4c, 0x66, 0x2e, 0x7b, 0x8a, 0xab, 0xba, 0xbb, 0xea, 0xfb, 0xbe,
+	0xaa, 0xae, 0x0e, 0x8c, 0x12, 0x5e, 0x14, 0xd1, 0x9c, 0xd3, 0x2c, 0x17, 0x52, 0xf8, 0x93, 0xb9,
+	0x98, 0x0b, 0xf5, 0xf9, 0xb0, 0xfc, 0xaa, 0xbc, 0xe4, 0x57, 0x04, 0x38, 0xe4, 0xdf, 0x3f, 0xe3,
+	0x85, 0xfc, 0x5a, 0x48, 0x5e, 0x7f, 0x62, 0x0c, 0x8e, 0xe4, 0x79, 0xe2, 0xa1, 0x03, 0xf4, 0xc0,
+	0x09, 0xd5, 0x37, 0x3e, 0x80, 0xc1, 0x2c, 0x4a, 0x59, 0xcc, 0x22, 0xc9, 0xa7, 0xcc, 0xb3, 0xd5,
+	0x92, 0xe9, 0x2a, 0x77, 0x2c, 0xa2, 0x42, 0x1e, 0x8b, 0xf9, 0x57, 0xe5, 0xe1, 0x56, 0xb5, 0xc3,
+	0x70, 0x61, 0x02, 0xc3, 0xda, 0x9c, 0xa6, 0x8c, 0xff, 0xe8, 0x39, 0x6a, 0x4b, 0xc3, 0x47, 0x3e,
+	0x83, 0x71, 0x03, 0x51, 0x91, 0x89, 0xb4, 0xe0, 0xd7, 0x41, 0x5a, 0x0a, 0xc9, 0x3f, 0xcd, 0xa3,
+	0x54, 0xf2, 0x0a, 0x52, 0x2f, 0x34, 0x5d, 0x24, 0x83, 0xde, 0xb1, 0x98, 0x3f, 0x4e, 0x65, 0x7e,
+	0x8e, 0x27, 0xd0, 0x8e, 0x55, 0xd6, 0x2a, 0x44, 0x65, 0xac, 0xe3, 0xda, 0x1b, 0x54, 0x45, 0x92,
+	0x44, 0x29, 0x3b, 0x89, 0x12, 0xae, 0x88, 0xf4, 0x43, 0xd3, 0x85, 0x3d, 0xe8, 0xd6, 0xa6, 0xe2,
+	0x30, 0x0c, 0xb5, 0x49, 0xfe, 0x46, 0x30, 0x39, 0xca, 0x32, 0x9e, 0xb2, 0x32, 0x6b, 0xcc, 0x8b,
+	0x7d, 0x9a, 0xfa, 0xd0, 0x5b, 0xf0, 0x88, 0xf1, 0x7c, 0x2d, 0xe8, 0xda, 0x2e, 0x41, 0x64, 0x39,
+	0x5f, 0x6e, 0xa8, 0x69, 0xb8, 0x4a, 0x35, 0x6b, 0xb3, 0xa1, 0xa6, 0xe9, 0xd3, 0x54, 0x62, 0x59,
+	0x6d, 0x69, 0xd7, 0x55, 0xbb, 0x72, 0xe1, 0xb7, 0xa0, 0xcb, 0x2b, 0xa4, 0x5e, 0xe7, 0xa0, 0xf5,
+	0x60, 0x70, 0xd8, 0xa7, 0x5a, 0xb2, 0x47, 0xce, 0xc5, 0x3f, 0xaf, 0x59, 0xa1, 0x5e, 0x27, 0x3f,
+	0xc3, 0xbd, 0x0d, 0x6a, 0x7b, 0x8a, 0xb3, 0x96, 0xdb, 0x36, 0xe5, 0xde, 0xc0, 0xd3, 0xda, 0xc6,
+	0xe3, 0x41, 0xb7, 0x78, 0x36, 0x9b, 0xf1, 0xa2, 0x50, 0x84, 0x7a, 0xa1, 0x36, 0xc9, 0x53, 0xc0,
+	0xa7, 0x69, 0x94, 0x15, 0x4f, 0x84, 0x3c, 0x2a, 0xbe, 0xd3, 0xba, 0x9a, 0x1a, 0xa2, 0x0d, 0x0d,
+	0x5f, 0x85, 0x7e, 0xd9, 0x5b, 0x53, 0x03, 0xc7, 0x95, 0x43, 0x9d, 0x8c, 0x0a, 0x69, 0xc8, 0xbb,
+	0xb6, 0xc9, 0x43, 0x18, 0x37, 0x72, 0xd5, 0x44, 0x0d, 0x70, 0xa8, 0x09, 0xee, 0x0f, 0x04, 0x2f,
+	0xeb, 0x13, 0x21, 0x9f, 0x89, 0x25, 0xcf, 0xcf, 0x5f, 0x28, 0x44, 0xfc, 0x26, 0x74, 0x13, 0x9e,
+	0x9c, 0xf1, 0xbc, 0x14, 0xaa, 0x2c, 0x5c, 0x97, 0x7e, 0xae, 0x6c, 0x5d, 0xb6, 0x7a, 0xb5, 0xac,
+	0x44, 0x21, 0x23, 0xc9, 0x55, 0xf5, 0x87, 0x61, 0x65, 0x90, 0xa7, 0xe0, 0x6d, 0xe3, 0xdd, 0x53,
+	0x4f, 0x83, 0xba, 0xdd, 0xa0, 0x7e, 0x73, 0x4d, 0xc9, 0x21, 0x74, 0x2a, 0x68, 0xf8, 0x0e, 0xd8,
+	0xb1, 0x16, 0xc1, 0x8e, 0x59, 0x19, 0x35, 0x62, 0x2c, 0xd7, 0x51, 0xfb, 0xa1, 0x36, 0xc9, 0x87,
+	0xf0, 0x52, 0x75, 0xa6, 0x78, 0x12, 0x67, 0x5a, 0x49, 0x83, 0x33, 0xda, 0xc7, 0x99, 0x50, 0xc0,
+	0xe6, 0xe9, 0x1b, 0xcb, 0x77, 0x02, 0xa3, 0x6a, 0xbf, 0xce, 0x74, 0x1f, 0x3a, 0x55, 0x8d, 0xea,
+	0x9d, 0xb5, 0x85, 0x5f, 0x87, 0x4e, 0x95, 0x43, 0xe1, 0xdd, 0x02, 0x50, 0x2f, 0x92, 0x2f, 0xe1,
+	0x8e, 0x8e, 0x77, 0x53, 0xee, 0x32, 0x64, 0x9d, 0x6a, 0x77, 0xc8, 0x6a, 0x91, 0x74, 0xa1, 0xfd,
+	0x38, 0xc9, 0xe4, 0x39, 0xf9, 0x05, 0x41, 0x4f, 0x97, 0xae, 0xd9, 0x3f, 0x68, 0x5f, 0xff, 0xd8,
+	0x1b, 0xfd, 0xb3, 0x6e, 0x8b, 0x96, 0xd1, 0x16, 0xb7, 0xee, 0xaa, 0xb7, 0x19, 0xf4, 0x4f, 0x04,
+	0xe3, 0xa7, 0xea, 0xd4, 0x00, 0xba, 0xa7, 0x52, 0x64, 0x19, 0x67, 0xae, 0x85, 0xef, 0xc2, 0x60,
+	0x9a, 0xc6, 0x32, 0x8e, 0x16, 0xf1, 0x4f, 0x9c, 0xb9, 0x08, 0x03, 0x74, 0x8e, 0x15, 0x07, 0xd7,
+	0xc6, 0x43, 0xe8, 0x7d, 0x22, 0x16, 0x0b, 0xf1, 0x03, 0xcf, 0xdd, 0x16, 0x1e, 0x41, 0xff, 0x63,
+	0xfd, 0x82, 0xb8, 0x0e, 0x76, 0x61, 0xa8, 0x89, 0xc9, 0x38, 0x9d, 0xbb, 0xed, 0xc3, 0x3f, 0x5b,
+	0xe0, 0x84, 0xd1, 0xb7, 0x12, 0xbf, 0x0f, 0x03, 0xe3, 0x59, 0xc0, 0x63, 0xba, 0xfd, 0x6c, 0xf9,
+	0x13, 0xba, 0xe3, 0xe5, 0x20, 0x16, 0xfe, 0x08, 0x46, 0x8d, 0xb9, 0x85, 0xef, 0xd1, 0x5d, 0x23,
+	0xda, 0xbf, 0x4f, 0x77, 0x8e, 0x37, 0x62, 0x95, 0xd9, 0x8d, 0x71, 0x80, 0xc7, 0x74, 0x7b, 0x10,
+	0xf9, 0x13, 0xba, 0x63, 0x62, 0x10, 0x0b, 0x4f, 0xc1, 0xdd, 0xbc, 0x68, 0xd8, 0xa3, 0xd7, 0xcc,
+	0x0a, 0xff, 0x15, 0x7a, 0xdd, 0xad, 0x24, 0x16, 0x7e, 0x0f, 0xe0, 0xaa, 0xab, 0x31, 0xa6, 0x5b,
+	0x17, 0xc4, 0x1f, 0xd3, 0xed, 0xb6, 0x27, 0x16, 0xa6, 0xd0, 0x3f, 0x62, 0x4c, 0xdf, 0x41, 0xda,
+	0x68, 0x75, 0xff, 0x2e, 0x6d, 0xb6, 0x2a, 0xb1, 0xf0, 0x3b, 0x30, 0x0c, 0x79, 0x22, 0x96, 0xfc,
+	0xf6, 0x47, 0x3c, 0x70, 0xbe, 0x88, 0xd3, 0x39, 0xee, 0x50, 0xd5, 0xa5, 0x7e, 0xfd, 0x4b, 0xac,
+	0x47, 0x6f, 0x5c, 0x5c, 0x06, 0xd6, 0xf3, 0xcb, 0x00, 0xfd, 0x77, 0x19, 0xa0, 0xdf, 0x57, 0x01,
+	0xba, 0x58, 0x05, 0xe8, 0xaf, 0x55, 0x80, 0x9e, 0xaf, 0x02, 0xf4, 0xdb, 0xbf, 0x81, 0xf5, 0x8d,
+	0x43, 0x3f, 0xc8, 0xce, 0xce, 0x3a, 0xea, 0x3f, 0xc9, 0xbb, 0xff, 0x07, 0x00, 0x00, 0xff, 0xff,
+	0xdb, 0xa9, 0x94, 0x64, 0xba, 0x08, 0x00, 0x00,
 }
 
 func (this *RequestVoteRequest) VerboseEqual(that interface{}) error {
@@ -1232,7 +1234,7 @@ func (this *AppendEntriesResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *SnapshotRequest) VerboseEqual(that interface{}) error {
+func (this *SnapshotAskRequest) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -1240,22 +1242,22 @@ func (this *SnapshotRequest) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*SnapshotRequest)
+	that1, ok := that.(*SnapshotAskRequest)
 	if !ok {
-		that2, ok := that.(SnapshotRequest)
+		that2, ok := that.(SnapshotAskRequest)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *SnapshotRequest")
+			return fmt.Errorf("that is not of type *SnapshotAskRequest")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *SnapshotRequest but is nil && this != nil")
+		return fmt.Errorf("that is type *SnapshotAskRequest but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *SnapshotRequest but is not nil && this == nil")
+		return fmt.Errorf("that is type *SnapshotAskRequest but is not nil && this == nil")
 	}
 	if this.LeaderId != that1.LeaderId {
 		return fmt.Errorf("LeaderId this(%v) Not Equal that(%v)", this.LeaderId, that1.LeaderId)
@@ -1271,14 +1273,14 @@ func (this *SnapshotRequest) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
-func (this *SnapshotRequest) Equal(that interface{}) bool {
+func (this *SnapshotAskRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*SnapshotRequest)
+	that1, ok := that.(*SnapshotAskRequest)
 	if !ok {
-		that2, ok := that.(SnapshotRequest)
+		that2, ok := that.(SnapshotAskRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1304,7 +1306,7 @@ func (this *SnapshotRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *SnapshotResponse) VerboseEqual(that interface{}) error {
+func (this *SnapshotAskResponse) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -1312,22 +1314,22 @@ func (this *SnapshotResponse) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*SnapshotResponse)
+	that1, ok := that.(*SnapshotAskResponse)
 	if !ok {
-		that2, ok := that.(SnapshotResponse)
+		that2, ok := that.(SnapshotAskResponse)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *SnapshotResponse")
+			return fmt.Errorf("that is not of type *SnapshotAskResponse")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *SnapshotResponse but is nil && this != nil")
+		return fmt.Errorf("that is type *SnapshotAskResponse but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *SnapshotResponse but is not nil && this == nil")
+		return fmt.Errorf("that is type *SnapshotAskResponse but is not nil && this == nil")
 	}
 	if this.Success != that1.Success {
 		return fmt.Errorf("Success this(%v) Not Equal that(%v)", this.Success, that1.Success)
@@ -1337,14 +1339,14 @@ func (this *SnapshotResponse) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
-func (this *SnapshotResponse) Equal(that interface{}) bool {
+func (this *SnapshotAskResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*SnapshotResponse)
+	that1, ok := that.(*SnapshotAskResponse)
 	if !ok {
-		that2, ok := that.(SnapshotResponse)
+		that2, ok := that.(SnapshotAskResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1946,6 +1948,14 @@ func (this *Snapshot) VerboseEqual(that interface{}) error {
 	if !bytes.Equal(this.State, that1.State) {
 		return fmt.Errorf("State this(%v) Not Equal that(%v)", this.State, that1.State)
 	}
+	if len(this.Members) != len(that1.Members) {
+		return fmt.Errorf("Members this(%v) Not Equal that(%v)", len(this.Members), len(that1.Members))
+	}
+	for i := range this.Members {
+		if !this.Members[i].Equal(&that1.Members[i]) {
+			return fmt.Errorf("Members this[%v](%v) Not Equal that[%v](%v)", i, this.Members[i], i, that1.Members[i])
+		}
+	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
 	}
@@ -1978,6 +1988,14 @@ func (this *Snapshot) Equal(that interface{}) bool {
 	}
 	if !bytes.Equal(this.State, that1.State) {
 		return false
+	}
+	if len(this.Members) != len(that1.Members) {
+		return false
+	}
+	for i := range this.Members {
+		if !this.Members[i].Equal(&that1.Members[i]) {
+			return false
+		}
 	}
 	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
 		return false
@@ -2070,12 +2088,12 @@ func (this *AppendEntriesResponse) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *SnapshotRequest) GoString() string {
+func (this *SnapshotAskRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&pb.SnapshotRequest{")
+	s = append(s, "&pb.SnapshotAskRequest{")
 	s = append(s, "LeaderId: "+fmt.Sprintf("%#v", this.LeaderId)+",\n")
 	s = append(s, "LastIndex: "+fmt.Sprintf("%#v", this.LastIndex)+",\n")
 	s = append(s, "LastTerm: "+fmt.Sprintf("%#v", this.LastTerm)+",\n")
@@ -2085,12 +2103,12 @@ func (this *SnapshotRequest) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *SnapshotResponse) GoString() string {
+func (this *SnapshotAskResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 5)
-	s = append(s, "&pb.SnapshotResponse{")
+	s = append(s, "&pb.SnapshotAskResponse{")
 	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
@@ -2226,11 +2244,18 @@ func (this *Snapshot) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 8)
 	s = append(s, "&pb.Snapshot{")
 	s = append(s, "LastIndex: "+fmt.Sprintf("%#v", this.LastIndex)+",\n")
 	s = append(s, "LastTerm: "+fmt.Sprintf("%#v", this.LastTerm)+",\n")
 	s = append(s, "State: "+fmt.Sprintf("%#v", this.State)+",\n")
+	if this.Members != nil {
+		vs := make([]Member, len(this.Members))
+		for i := range vs {
+			vs[i] = this.Members[i]
+		}
+		s = append(s, "Members: "+fmt.Sprintf("%#v", vs)+",\n")
+	}
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
 	}
@@ -2262,8 +2287,8 @@ type RaftClient interface {
 	RequestVote(ctx context.Context, in *RequestVoteRequest, opts ...grpc.CallOption) (*RequestVoteResponse, error)
 	// AppendEntries 用于leader进行日志复制与心跳检测
 	AppendEntries(ctx context.Context, in *AppendEntriesRequest, opts ...grpc.CallOption) (*AppendEntriesResponse, error)
-	// Snapshot leader询问follower是否需要快照恢复
-	Snapshot(ctx context.Context, in *SnapshotRequest, opts ...grpc.CallOption) (*SnapshotResponse, error)
+	// SnapshotAsk leader询问follower是否需要快照恢复
+	SnapshotAsk(ctx context.Context, in *SnapshotAskRequest, opts ...grpc.CallOption) (*SnapshotAskResponse, error)
 	// SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
 	SnapshotRecovery(ctx context.Context, in *SnapshotRecoveryRequest, opts ...grpc.CallOption) (*SnapshotRecoveryResponse, error)
 	// Membership 当前集群中的成员信息
@@ -2302,9 +2327,9 @@ func (c *raftClient) AppendEntries(ctx context.Context, in *AppendEntriesRequest
 	return out, nil
 }
 
-func (c *raftClient) Snapshot(ctx context.Context, in *SnapshotRequest, opts ...grpc.CallOption) (*SnapshotResponse, error) {
-	out := new(SnapshotResponse)
-	err := c.cc.Invoke(ctx, "/Raft/Snapshot", in, out, opts...)
+func (c *raftClient) SnapshotAsk(ctx context.Context, in *SnapshotAskRequest, opts ...grpc.CallOption) (*SnapshotAskResponse, error) {
+	out := new(SnapshotAskResponse)
+	err := c.cc.Invoke(ctx, "/Raft/SnapshotAsk", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -2362,8 +2387,8 @@ type RaftServer interface {
 	RequestVote(context.Context, *RequestVoteRequest) (*RequestVoteResponse, error)
 	// AppendEntries 用于leader进行日志复制与心跳检测
 	AppendEntries(context.Context, *AppendEntriesRequest) (*AppendEntriesResponse, error)
-	// Snapshot leader询问follower是否需要快照恢复
-	Snapshot(context.Context, *SnapshotRequest) (*SnapshotResponse, error)
+	// SnapshotAsk leader询问follower是否需要快照恢复
+	SnapshotAsk(context.Context, *SnapshotAskRequest) (*SnapshotAskResponse, error)
 	// SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
 	SnapshotRecovery(context.Context, *SnapshotRecoveryRequest) (*SnapshotRecoveryResponse, error)
 	// Membership 当前集群中的成员信息
@@ -2386,8 +2411,8 @@ func (*UnimplementedRaftServer) RequestVote(ctx context.Context, req *RequestVot
 func (*UnimplementedRaftServer) AppendEntries(ctx context.Context, req *AppendEntriesRequest) (*AppendEntriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AppendEntries not implemented")
 }
-func (*UnimplementedRaftServer) Snapshot(ctx context.Context, req *SnapshotRequest) (*SnapshotResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Snapshot not implemented")
+func (*UnimplementedRaftServer) SnapshotAsk(ctx context.Context, req *SnapshotAskRequest) (*SnapshotAskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SnapshotAsk not implemented")
 }
 func (*UnimplementedRaftServer) SnapshotRecovery(ctx context.Context, req *SnapshotRecoveryRequest) (*SnapshotRecoveryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SnapshotRecovery not implemented")
@@ -2445,20 +2470,20 @@ func _Raft_AppendEntries_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Raft_Snapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SnapshotRequest)
+func _Raft_SnapshotAsk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SnapshotAskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RaftServer).Snapshot(ctx, in)
+		return srv.(RaftServer).SnapshotAsk(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Raft/Snapshot",
+		FullMethod: "/Raft/SnapshotAsk",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RaftServer).Snapshot(ctx, req.(*SnapshotRequest))
+		return srv.(RaftServer).SnapshotAsk(ctx, req.(*SnapshotAskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2566,8 +2591,8 @@ var _Raft_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Raft_AppendEntries_Handler,
 		},
 		{
-			MethodName: "Snapshot",
-			Handler:    _Raft_Snapshot_Handler,
+			MethodName: "SnapshotAsk",
+			Handler:    _Raft_SnapshotAsk_Handler,
 		},
 		{
 			MethodName: "SnapshotRecovery",
@@ -2852,7 +2877,7 @@ func (m *AppendEntriesResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SnapshotRequest) Marshal() (dAtA []byte, err error) {
+func (m *SnapshotAskRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2862,12 +2887,12 @@ func (m *SnapshotRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SnapshotRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *SnapshotAskRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SnapshotRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *SnapshotAskRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -2894,7 +2919,7 @@ func (m *SnapshotRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SnapshotResponse) Marshal() (dAtA []byte, err error) {
+func (m *SnapshotAskResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -2904,12 +2929,12 @@ func (m *SnapshotResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SnapshotResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *SnapshotAskResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SnapshotResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *SnapshotAskResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -3303,6 +3328,20 @@ func (m *Snapshot) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
 	}
+	if len(m.Members) > 0 {
+		for iNdEx := len(m.Members) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Members[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintMessage(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x22
+		}
+	}
 	if len(m.State) > 0 {
 		i -= len(m.State)
 		copy(dAtA[i:], m.State)
@@ -3459,7 +3498,7 @@ func (m *AppendEntriesResponse) Size() (n int) {
 	return n
 }
 
-func (m *SnapshotRequest) Size() (n int) {
+func (m *SnapshotAskRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3480,7 +3519,7 @@ func (m *SnapshotRequest) Size() (n int) {
 	return n
 }
 
-func (m *SnapshotResponse) Size() (n int) {
+func (m *SnapshotAskResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3660,6 +3699,12 @@ func (m *Snapshot) Size() (n int) {
 	l = len(m.State)
 	if l > 0 {
 		n += 1 + l + sovMessage(uint64(l))
+	}
+	if len(m.Members) > 0 {
+		for _, e := range m.Members {
+			l = e.Size()
+			n += 1 + l + sovMessage(uint64(l))
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -4353,7 +4398,7 @@ func (m *AppendEntriesResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SnapshotRequest) Unmarshal(dAtA []byte) error {
+func (m *SnapshotAskRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4376,10 +4421,10 @@ func (m *SnapshotRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: SnapshotRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: SnapshotAskRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SnapshotRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: SnapshotAskRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4461,7 +4506,7 @@ func (m *SnapshotRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SnapshotResponse) Unmarshal(dAtA []byte) error {
+func (m *SnapshotAskResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4484,10 +4529,10 @@ func (m *SnapshotResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: SnapshotResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: SnapshotAskResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SnapshotResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: SnapshotAskResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -5433,6 +5478,40 @@ func (m *Snapshot) Unmarshal(dAtA []byte) error {
 			m.State = append(m.State[:0], dAtA[iNdEx:postIndex]...)
 			if m.State == nil {
 				m.State = []byte{}
+			}
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Members", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMessage
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Members = append(m.Members, Member{})
+			if err := m.Members[len(m.Members)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
 		default:

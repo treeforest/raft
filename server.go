@@ -7,8 +7,11 @@ import (
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft/pb"
 	"google.golang.org/grpc"
+	"hash/crc32"
 	"io/ioutil"
 	"net"
+	"os"
+	"path"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -25,8 +28,8 @@ type server struct {
 	locker                sync.RWMutex                   // 读写锁
 	config                *Config                        // 配置文件
 	stateMachine          StateMachine                   // 状态机
-	pendingSnapshot       *pb.Snapshot                   // 待存储的快照
-	snapshot              *pb.Snapshot                   // 最新快照
+	pendingSnapshot       *Snapshot                      // 待存储的快照
+	snapshot              *Snapshot                      // 最新快照
 	votedFor              uint64                         // 选票投给了哪个候选人
 	log                   *Log                           // 日志对象
 	members               sync.Map                       // members in cluster
@@ -235,7 +238,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 	// 1、reply false if term < currentTerm
 	currentTerm := s.CurrentTerm()
 	if req.Term < currentTerm {
-		log.Warn("stale term")
+		log.Debug("stale term")
 		return &pb.AppendEntriesResponse{
 			Term:        s.CurrentTerm(),
 			Index:       s.log.CurrentIndex(),
@@ -300,20 +303,19 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 	}, nil
 }
 
-func (s *server) Snapshot(ctx context.Context, req *pb.SnapshotRequest) (
-	resp *pb.SnapshotResponse, err error) {
-	log.Debug("Snapshot")
+func (s *server) SnapshotAsk(ctx context.Context, req *pb.SnapshotAskRequest) (*pb.SnapshotAskResponse, error) {
+	log.Debug("SnapshotAsk")
 
-	resp = &pb.SnapshotResponse{Success: false}
+	resp := &pb.SnapshotAskResponse{Success: false}
 
 	entry := s.log.getEntry(req.LastIndex)
 	if entry != nil && entry.Term == req.LastTerm {
-		return
+		return resp, nil
 	}
 
 	s.setState(pb.NodeState_Snapshotting)
 	resp.Success = true
-	return
+	return resp, nil
 }
 
 func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryRequest) (*pb.SnapshotRecoveryResponse, error) {
@@ -323,6 +325,7 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 		log.Fatal("cannot recover from previous state")
 	}
 
+	s.log.SetCurrentTerm(req.LastTerm)
 	s.log.updateCommitIndex(req.LastIndex)
 
 	// add member
@@ -331,19 +334,15 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 	}
 
 	// 创建本地快照
-	s.pendingSnapshot = &pb.Snapshot{
+	s.pendingSnapshot = newSnapshot(s.snapshotPath(req.LastIndex, req.LastTerm), &pb.Snapshot{
 		LastIndex: req.LastIndex,
 		LastTerm:  req.LastTerm,
 		State:     req.State,
-	}
-	data, _ := s.pendingSnapshot.Marshal()
-	err := ioutil.WriteFile(s.config.SnapshotPath, data, 777)
-	if err == nil {
-		s.snapshot = s.pendingSnapshot
-		s.pendingSnapshot = nil
-	}
+		Members:   req.Members,
+	})
+	_ = s.saveSnapshot()
 
-	// 清楚 LastIncludedIndex 之前的条目
+	// 清除 LastIndex 之前的条目
 	_ = s.log.compact(req.LastIndex, req.LastTerm)
 
 	s.updateCurrentTerm(req.LastTerm, req.LeaderId)
@@ -429,7 +428,7 @@ func (s *server) leaveCluster() {
 	if s.IsLeader() {
 		s.members.Range(func(key, value interface{}) bool {
 			m := value.(*member)
-			_ = m.sendRemoveMember(&pb.MemberRequest{Leader: true, Member: s.Self()})
+			_ = m.sendRemoveMemberRequest(&pb.MemberRequest{Leader: true, Member: s.Self()})
 			return true
 		})
 		return
@@ -445,7 +444,7 @@ func (s *server) leaveCluster() {
 	}
 
 	leader := value.(*member)
-	_ = leader.sendRemoveMember(&pb.MemberRequest{Leader: false, Member: s.Self()})
+	_ = leader.sendRemoveMemberRequest(&pb.MemberRequest{Leader: false, Member: s.Self()})
 }
 
 func (s *server) IsLeader() bool {
@@ -792,7 +791,7 @@ func (s *server) addMember(mem pb.Member) {
 		}
 		s.members.Range(func(_, v interface{}) bool {
 			go func() {
-				_ = v.(*member).sendAddMember(req)
+				_ = v.(*member).sendAddMemberRequest(req)
 			}()
 			return true
 		})
@@ -821,7 +820,7 @@ func (s *server) removeMember(id uint64) {
 		req := &pb.MemberRequest{Leader: true, Member: m.Member}
 		s.members.Range(func(_, v interface{}) bool {
 			go func() {
-				_ = v.(*member).sendRemoveMember(req)
+				_ = v.(*member).sendRemoveMemberRequest(req)
 			}()
 			return true
 		})
@@ -853,4 +852,150 @@ func (s *server) QuorumSize() int {
 
 func (s *server) Self() pb.Member {
 	return pb.Member{Id: s.ID(), Address: s.Address()}
+}
+
+// snapshotPath 快照路径
+func (s *server) snapshotPath(lastIndex, lastTerm uint64) string {
+	return path.Join(s.config.SnapshotPath, "snapshot", fmt.Sprintf("%d_%d.ss", lastTerm, lastIndex))
+}
+
+// TakeSnapshot 创建快照
+func (s *server) TakeSnapshot() error {
+	if s.stateMachine == nil {
+		return errors.New("missing state machine")
+	}
+
+	if s.pendingSnapshot != nil {
+		// 当前节点正在创建快照
+		return errors.New("last snapshot is not finished")
+	}
+
+	lastIndex, lastTerm := s.log.commitInfo()
+
+	if lastIndex == s.log.startIndex {
+		return nil
+	}
+
+	state, err := s.stateMachine.Save()
+	if err != nil {
+		return err
+	}
+
+	s.pendingSnapshot = newSnapshot(s.snapshotPath(lastIndex, lastTerm), &pb.Snapshot{
+		LastIndex: lastIndex,
+		LastTerm:  lastTerm,
+		State:     state,
+		Members:   s.Members(),
+	})
+
+	_ = s.saveSnapshot()
+
+	if lastIndex-s.log.startIndex > s.config.NumberOfLogEntriesAfterSnapshot {
+		// 压缩：保留 NumberOfLogEntriesAfterSnapshot 条日志条目，删除多余的日志条目
+		compactIndex := lastIndex - s.config.NumberOfLogEntriesAfterSnapshot
+		compactTerm := s.log.getEntry(compactIndex).Term
+		_ = s.log.compact(compactIndex, compactTerm)
+	}
+
+	return nil
+}
+
+// saveSnapshot 保存快照
+func (s *server) saveSnapshot() error {
+	if s.pendingSnapshot == nil {
+		return errors.New("pendingSnapshot is nil")
+	}
+
+	if err := s.pendingSnapshot.Save(); err != nil {
+		log.Errorf("pending snapshot save failed: %v", err)
+		return err
+	}
+
+	tmp := s.snapshot
+	s.snapshot = s.pendingSnapshot
+
+	// 当快照发生变化时，删除前一个快照
+	if tmp != nil && (tmp.LastIndex != s.snapshot.LastIndex || tmp.LastTerm != s.snapshot.LastTerm) {
+		_ = tmp.Remove()
+	}
+	s.pendingSnapshot = nil
+
+	return nil
+}
+
+// LoadSnapshot 重启时加载快照恢复状态
+func (s *server) LoadSnapshot() error {
+	dir, err := os.OpenFile(path.Join(s.config.SnapshotPath, "snapshot"), os.O_RDONLY, 0)
+	if err != nil {
+		log.Debug("cannot open snapshot")
+		return err
+	}
+
+	filenames, err := dir.Readdirnames(-1)
+	if err != nil {
+		_ = dir.Close()
+		panic(err)
+	}
+	_ = dir.Close()
+
+	if len(filenames) == 0 {
+		log.Debug("no snapshot to load")
+		return nil
+	}
+
+	sort.Strings(filenames)
+
+	// 最新快照路径
+	snapshotPath := path.Join(s.config.SnapshotPath, "snapshot", filenames[len(filenames)-1])
+
+	// 读取状态数据
+	file, err := os.OpenFile(snapshotPath, os.O_RDONLY, 0)
+	if err != nil {
+		log.Debug("cannot open snapshot file ", snapshotPath)
+		return err
+	}
+	defer file.Close()
+
+	var checksum uint32
+	n, err := fmt.Fscanf(file, "%08x\n", &checksum)
+	if err != nil {
+		return err
+	} else if n != 1 {
+		return errors.New("checksum error, bad snapshot file")
+	}
+
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	if checksum != crc32.ChecksumIEEE(b) {
+		return errors.New("bad snapshot file")
+	}
+
+	if s.snapshot == nil {
+		s.snapshot = newSnapshot(snapshotPath, &pb.Snapshot{})
+	}
+	if err = s.snapshot.Unmarshal(b); err != nil {
+		log.Debug("unmarshal snapshot error: ", err)
+		return err
+	}
+
+	// 恢复状态
+	if err = s.stateMachine.Recovery(s.snapshot.State); err != nil {
+		log.Debug("recovery snapshot error: ", err)
+		return err
+	}
+
+	// 恢复集群中的成员
+	for _, m := range s.snapshot.Members {
+		s.addMember(m)
+	}
+
+	// 更新日志状态
+	s.log.startTerm = s.snapshot.LastTerm
+	s.log.startIndex = s.snapshot.LastIndex
+	s.log.updateCommitIndex(s.snapshot.LastIndex)
+
+	return nil
 }

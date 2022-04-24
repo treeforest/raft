@@ -7,6 +7,8 @@ type Raft interface {
 	Stop()
 	Join(existing string)
 	Do(commandName string, command []byte) (*pb.LogEntry, error)
+	TakeSnapshot() error
+	LoadSnapshot() error
 	Running() bool
 	IsLeader() bool
 	LeaderId() uint64

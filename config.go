@@ -20,6 +20,9 @@ type Config struct {
 	// MaxLogEntriesPerRequest 每次最多请求的日志条目
 	MaxLogEntriesPerRequest uint64
 
+	// NumberOfLogEntriesAfterSnapshot 在保存快照后仍然保留的日志条目数量
+	NumberOfLogEntriesAfterSnapshot uint64
+
 	// HeartbeatInterval 探测节点状态的间隔
 	HeartbeatInterval time.Duration
 
@@ -53,20 +56,21 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		MemberId:                uint64(snowflake.Generate()),
-		Address:                 "localhost:4399",
-		MaxLogEntriesPerRequest: 40,
-		HeartbeatInterval:       time.Millisecond * 100,
-		HeartbeatTimeout:        time.Millisecond * 300,
-		ElectionTimeout:         time.Millisecond * 300,
-		DialTimeout:             time.Millisecond * 300,
+		MemberId:                        uint64(snowflake.Generate()),
+		Address:                         "localhost:4399",
+		MaxLogEntriesPerRequest:         2000,
+		NumberOfLogEntriesAfterSnapshot: 200,
+		HeartbeatInterval:               time.Millisecond * 100,
+		HeartbeatTimeout:                time.Millisecond * 300,
+		ElectionTimeout:                 time.Millisecond * 300,
+		DialTimeout:                     time.Millisecond * 300,
 		DialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
 		ServerOptions: []grpc.ServerOption{
 			grpc.Creds(insecure.NewCredentials()),
 		},
-		SnapshotPath:    "./snapshot",
+		SnapshotPath:    ".",
 		LogPath:         "./log",
 		SubscribeTTL:    time.Second * 3,
 		ReplicationType: Asynchronous,

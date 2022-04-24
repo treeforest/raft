@@ -19,8 +19,8 @@ service Raft {
   // AppendEntries 用于leader进行日志复制与心跳检测
   rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse){}
 
-  // Snapshot leader询问follower是否需要快照恢复
-  rpc Snapshot(SnapshotRequest) returns (SnapshotResponse) {}
+  // SnapshotAsk leader询问follower是否需要快照恢复
+  rpc SnapshotAsk(SnapshotAskRequest) returns (SnapshotAskResponse) {}
 
   // SnapshotRecovery leader向follower发送在Snapshot阶段商量好的快照
   rpc SnapshotRecovery(SnapshotRecoveryRequest) returns (SnapshotRecoveryResponse) {}
@@ -119,14 +119,14 @@ message AppendEntriesResponse{
 //  uint64 term = 1;
 //}
 
-// SnapshotRequest 询问是否需要快照恢复
-message SnapshotRequest {
+// SnapshotAskRequest 询问是否需要快照恢复
+message SnapshotAskRequest {
   uint64 leaderId = 1;
   uint64 lastIndex = 2;
   uint64 lastTerm = 3;
 }
 
-message SnapshotResponse {
+message SnapshotAskResponse {
   // success 如果需要快照恢复，则返回true
   bool success = 1;
 }
@@ -177,4 +177,5 @@ message Snapshot {
   uint64 lastIndex = 1;
   uint64 lastTerm = 2;
   bytes state = 3;
+  repeated Member members = 4 [(gogoproto.nullable) = false];
 }
