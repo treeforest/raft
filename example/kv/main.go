@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -75,6 +76,35 @@ func (s *Server) Apply(commandName string, command []byte) {
 
 func (s *Server) Serve(addr string) {
 	r := gin.Default()
+	r.POST("/test", func(c *gin.Context) {
+		cmd := s.pool.Get().(*Command)
+		cmd.Key = "hello"
+		cmd.Value = "world"
+		data, _ := json.Marshal(cmd)
+
+		n := 1000
+		succ := int32(0)
+		wg := sync.WaitGroup{}
+		wg.Add(n)
+		since := time.Now()
+		for i := 0; i < n; i++ {
+			go func() {
+				defer wg.Done()
+				_, err := s.peer.Do(SET, data)
+				if err == nil {
+					atomic.AddInt32(&succ, 1)
+				}
+			}()
+		}
+		wg.Wait()
+		used := time.Now().Sub(since).Milliseconds()
+
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+			"detail": fmt.Sprintf("count:%d success:%d used:%dms average:%dms",
+				n, succ, used, used/int64(n)),
+		})
+	})
 	r.POST("/set", func(c *gin.Context) {
 		if !s.peer.IsLeader() {
 			c.JSON(http.StatusOK, gin.H{"code": -1, "leader": s.peer.LeaderAddress()})
@@ -85,14 +115,13 @@ func (s *Server) Serve(addr string) {
 		cmd.Key = c.Query("key")
 		cmd.Value = c.Query("value")
 		data, _ := json.Marshal(cmd)
-
 		entry, err := s.peer.Do(SET, data)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": -1, "error": err.Error()})
 			return
 		}
 
-		log.Info("index=", entry.Index)
+		log.Infof("index=%d currentIndex=%d", entry.Index, s.peer.CurrentIndex())
 		c.JSON(http.StatusOK, gin.H{"code": 0})
 	})
 	r.POST("/del", func(c *gin.Context) {

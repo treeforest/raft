@@ -60,10 +60,10 @@ func DefaultConfig() *Config {
 		Address:                         "localhost:4399",
 		MaxLogEntriesPerRequest:         2000,
 		NumberOfLogEntriesAfterSnapshot: 200,
-		HeartbeatInterval:               time.Millisecond * 100,
-		HeartbeatTimeout:                time.Millisecond * 300,
+		HeartbeatInterval:               time.Millisecond * 80,
+		HeartbeatTimeout:                time.Millisecond * 400,
 		ElectionTimeout:                 time.Millisecond * 300,
-		DialTimeout:                     time.Millisecond * 300,
+		DialTimeout:                     time.Millisecond * 500,
 		DialOptions: []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		},
@@ -73,6 +73,6 @@ func DefaultConfig() *Config {
 		SnapshotPath:    ".",
 		LogPath:         "./log",
 		SubscribeTTL:    time.Second * 3,
-		ReplicationType: Asynchronous,
+		ReplicationType: Semisynchronous,
 	}
 }

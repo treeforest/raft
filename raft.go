@@ -13,4 +13,6 @@ type Raft interface {
 	IsLeader() bool
 	LeaderId() uint64
 	LeaderAddress() string
+	CurrentTerm() uint64
+	CurrentIndex() uint64
 }

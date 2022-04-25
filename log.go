@@ -324,7 +324,7 @@ func (l *Log) setCommitIndex(index uint64) error {
 		// Update commit index.
 		l.commitIndex = entry.Index
 		l.flushCommitIndex()
-		log.Infof("update commitIndex: %d", l.commitIndex)
+		log.Debugf("update commitIndex: %d", l.commitIndex)
 
 		l.publish(entry.Index)
 
@@ -396,7 +396,7 @@ func (l *Log) appendEntries(entries []pb.LogEntry) error {
 		if err = l.writeEntry(&entry); err != nil {
 			return err
 		}
-		log.Infof("append entry, term:%d index:%d", entry.Term, entry.Index)
+		log.Debugf("append entry, term:%d index:%d", entry.Term, entry.Index)
 	}
 
 	if err != nil {

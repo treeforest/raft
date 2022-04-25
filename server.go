@@ -39,6 +39,7 @@ type server struct {
 	leaderId              uint64                         // 当state为follower时，设置为leader的id
 	followerHeartbeatChan chan bool                      // follower用于更新与leader之间的心跳
 	leaderRespChan        chan *pb.AppendEntriesResponse // leaderId loop use
+	doMutex               sync.Mutex                     // 执行锁
 }
 
 func New(config *Config, stateMachine StateMachine) Raft {
@@ -56,7 +57,8 @@ func New(config *Config, stateMachine StateMachine) Raft {
 		routineGroup:          sync.WaitGroup{},
 		leaderId:              0,
 		followerHeartbeatChan: make(chan bool, 256),
-		leaderRespChan:        make(chan *pb.AppendEntriesResponse, 256),
+		leaderRespChan:        make(chan *pb.AppendEntriesResponse, 1024),
+		doMutex:               sync.Mutex{},
 	}
 }
 
@@ -123,6 +125,8 @@ func (s *server) Init() error {
 }
 
 func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (*pb.RequestVoteResponse, error) {
+	log.Info("RequestVote")
+
 	if req.Term < s.CurrentTerm() {
 		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
 	}
@@ -200,6 +204,8 @@ func (s *server) Do(commandName string, command []byte) (*pb.LogEntry, error) {
 		return nil, NotLeader
 	}
 
+	s.doMutex.Lock()
+
 	entry := &pb.LogEntry{
 		Term:        s.CurrentTerm(),
 		Index:       s.log.nextIndex(),
@@ -208,8 +214,6 @@ func (s *server) Do(commandName string, command []byte) (*pb.LogEntry, error) {
 	}
 
 	sub := s.log.Subscribe(entry.Index, s.config.SubscribeTTL)
-
-	s.locker.Lock()
 	if err := s.log.writeEntry(entry); err != nil {
 		s.locker.Unlock()
 		return nil, err
@@ -218,12 +222,14 @@ func (s *server) Do(commandName string, command []byte) (*pb.LogEntry, error) {
 		// 异步复制，leader直接提交日志，并返回结果
 		_ = s.log.setCommitIndex(entry.Index)
 	}
-	s.locker.Unlock()
+
+	s.doMutex.Unlock()
 
 	_, err := sub.Listen()
 	if err != nil {
 		return nil, err
 	}
+
 	return entry, nil
 }
 
@@ -477,6 +483,10 @@ func (s *server) CurrentTerm() uint64 {
 	return s.log.CurrentTerm()
 }
 
+func (s *server) CurrentIndex() uint64 {
+	return s.log.CurrentIndex()
+}
+
 // Running 是否是运行状态
 func (s *server) Running() bool {
 	s.locker.RLock()
@@ -599,7 +609,7 @@ func (s *server) candidateLoop() {
 			currentTerm := s.log.SetNextTerm()
 
 			// 自己的选票投给自己
-			atomic.SwapUint64(&s.votedFor, s.ID())
+			s.votedFor = s.ID()
 
 			respChan = make(chan *pb.RequestVoteResponse, s.MemberCount())
 			req := &pb.RequestVoteRequest{
