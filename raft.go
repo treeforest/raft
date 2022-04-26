@@ -1,12 +1,10 @@
 package raft
 
-import "github.com/treeforest/raft/pb"
-
 type Raft interface {
 	Start() error
 	Stop()
 	Join(existing string)
-	Do(commandName string, command []byte) (*pb.LogEntry, error)
+	Do(commandName string, command []byte) (uint64, error)
 	TakeSnapshot() error
 	LoadSnapshot() error
 	Running() bool

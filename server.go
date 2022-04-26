@@ -39,10 +39,14 @@ type server struct {
 	leaderId              uint64                         // 当state为follower时，设置为leader的id
 	followerHeartbeatChan chan bool                      // follower用于更新与leader之间的心跳
 	leaderRespChan        chan *pb.AppendEntriesResponse // leaderId loop use
-	doMutex               sync.Mutex                     // 执行锁
+	cmdChan               chan *Command
+	cmdPool               *sync.Pool
 }
 
 func New(config *Config, stateMachine StateMachine) Raft {
+	pool := sync.Pool{New: func() interface{} {
+		return new(Command)
+	}}
 	return &server{
 		grpcServer:            nil,
 		locker:                sync.RWMutex{},
@@ -58,7 +62,8 @@ func New(config *Config, stateMachine StateMachine) Raft {
 		leaderId:              0,
 		followerHeartbeatChan: make(chan bool, 256),
 		leaderRespChan:        make(chan *pb.AppendEntriesResponse, 1024),
-		doMutex:               sync.Mutex{},
+		cmdChan:               make(chan *Command, 1024),
+		cmdPool:               &pool,
 	}
 }
 
@@ -92,7 +97,7 @@ func (s *server) Start() error {
 		defer s.routineGroup.Done()
 		log.Infof("grpc server running at %s", s.config.Address)
 		if err = s.grpcServer.Serve(lis); err != nil {
-			log.Error(err)
+			log.Fatal(err)
 		}
 	}()
 	time.Sleep(time.Millisecond * 50)
@@ -199,43 +204,62 @@ func (s *server) Join(existing string) {
 	log.Info("join cluster success")
 }
 
-func (s *server) Do(commandName string, command []byte) (*pb.LogEntry, error) {
+func (s *server) Do(commandName string, command []byte) (uint64, error) {
 	if !s.IsLeader() {
-		return nil, NotLeader
+		return 0, NotLeader
 	}
 
-	s.doMutex.Lock()
+	cmd := s.cmdPool.Get().(*Command)
+	cmd.name = commandName
+	cmd.data = command
+	cmd.c = make(chan uint64, 1)
 
-	entry := &pb.LogEntry{
-		Term:        s.CurrentTerm(),
-		Index:       s.log.nextIndex(),
-		CommandName: commandName,
-		Command:     command,
+	defer func() {
+		cmd.name = ""
+		cmd.data = []byte{}
+		s.cmdPool.Put(cmd)
+	}()
+
+	select {
+	case s.cmdChan <- cmd:
+	case <-s.stopped:
+		return 0, StopError
+	default:
+		// cmdChan 通道阻塞，采用异步发送的方式
+		s.routineGroup.Add(1)
+		go func() {
+			defer s.routineGroup.Done()
+			select {
+			case s.cmdChan <- cmd:
+			case <-s.stopped:
+				return
+			}
+		}()
+	}
+	
+	var index uint64
+	select {
+	case <-s.stopped:
+		return 0, StopError
+	case index = <-cmd.c:
 	}
 
-	sub := s.log.Subscribe(entry.Index, s.config.SubscribeTTL)
-	if err := s.log.writeEntry(entry); err != nil {
-		s.locker.Unlock()
-		return nil, err
-	}
-	if s.config.ReplicationType == Asynchronous {
-		// 异步复制，leader直接提交日志，并返回结果
-		_ = s.log.setCommitIndex(entry.Index)
+	if index == 0 {
+		return 0, errors.New("do error")
 	}
 
-	s.doMutex.Unlock()
-
+	sub := s.log.Subscribe(index, s.config.SubscribeTTL)
 	_, err := sub.Listen()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return entry, nil
+	return index, nil
 }
 
 // AppendEntries 用于leader进行日志复制与心跳检测
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest) (*pb.AppendEntriesResponse, error) {
-	log.Debugf("AppendEntries, request: %v", *req)
+	// log.Debugf("AppendEntries, request: %v", *req)
 
 	if !s.Running() {
 		return nil, StopError
@@ -300,6 +324,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 		}, nil
 	}
 
+	// log.Debugf("AppendEntries success")
 	// 若返回成功，则代表leader和follower的日志条目一定相同
 	return &pb.AppendEntriesResponse{
 		Term:        s.CurrentTerm(),
@@ -403,8 +428,7 @@ func (s *server) RemoveMember(ctx context.Context, req *pb.MemberRequest) (*pb.M
 
 // Ping ping message
 func (s *server) Ping(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
-	log.Debug("Ping")
-
+	// log.Debug("Ping")
 	return &pb.Empty{}, nil
 }
 
@@ -649,7 +673,7 @@ func (s *server) candidateLoop() {
 		case resp := <-respChan:
 			if resp.VoteGranted && resp.Term == s.CurrentTerm() {
 				votesGranted++
-				log.Infof("votesGranted=%d quorumSize=%d", votesGranted, s.QuorumSize())
+				log.Debugf("votesGranted=%d quorumSize=%d", votesGranted, s.QuorumSize())
 				break
 			}
 			if resp.Term > s.CurrentTerm() {
@@ -706,6 +730,26 @@ func (s *server) leaderLoop() {
 
 		case <-single:
 			_ = s.log.setCommitIndex(s.log.CurrentIndex())
+
+		case cmd := <-s.cmdChan:
+			entry := &pb.LogEntry{
+				Term:        s.CurrentTerm(),
+				Index:       s.log.nextIndex(),
+				CommandName: cmd.name,
+				Command:     cmd.data,
+			}
+			cmd.c <- entry.Index
+
+			if err := s.log.writeEntry(entry); err != nil {
+				cmd.c <- 0
+				log.Error("write entry error: ", err)
+				break
+			}
+
+			if s.config.ReplicationType == Asynchronous {
+				// 异步复制，leader直接提交日志，并返回结果
+				_ = s.log.setCommitIndex(entry.Index)
+			}
 
 		case resp := <-s.leaderRespChan:
 			if resp.Term > s.CurrentTerm() {

@@ -238,16 +238,12 @@ func (l *Log) getEntriesAfter(index uint64, maxLogEntriesPerRequest uint64) ([]p
 
 	// If we're going from the beginning of the log then return the whole log.
 	if index == l.startIndex {
-		log.Debug("log.entriesAfter.beginning: ", index, " ", l.startIndex)
+		// log.Debug("log.entriesAfter.beginning: ", index, " ", l.startIndex)
 		return l.entries, l.startTerm
 	}
 
-	log.Debug("log.entriesAfter.partial: ", index, " ", l.entries[len(l.entries)-1].Index)
-
 	entries := l.entries[index-l.startIndex:]
 	length := len(entries)
-
-	log.Debug("log.entriesAfter: startIndex:", l.startIndex, " length", len(l.entries))
 
 	if uint64(length) < maxLogEntriesPerRequest {
 		// Determine the term at the given Entry and return a subslice.
@@ -331,7 +327,7 @@ func (l *Log) setCommitIndex(index uint64) error {
 		// Apply the changes to the state machine and store the error code.
 		l.ApplyFunc(entry.CommandName, entry.Command)
 
-		log.Debugf("index: %v, entries index: %v", i, entryIndex)
+		// log.Debugf("index: %v, entries index: %v", i, entryIndex)
 	}
 	return nil
 }
@@ -346,7 +342,7 @@ func (l *Log) flushCommitIndex() {
 func (l *Log) truncate(index uint64, term uint64) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	log.Debug("log.truncate: ", index)
+	// log.Debug("log.truncate: ", index)
 
 	// 不允许截断已经提交的日志，即要求 index >= commitIndex
 	if index < l.commitIndex {
@@ -362,7 +358,7 @@ func (l *Log) truncate(index uint64, term uint64) error {
 
 	// 开始截断操作
 	if index == l.startIndex {
-		log.Debug("log.truncate.clear")
+		// log.Debug("log.truncate.clear")
 		l.entries = []pb.LogEntry{}
 	} else {
 		// 相同索引，却是不同任期，则不进行截断，并返回错误

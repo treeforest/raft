@@ -79,6 +79,7 @@ func (m *member) sendAppendEntriesRequest(req *pb.AppendEntriesRequest) error {
 	if resp.Success {
 		if len(req.Entries) > 0 {
 			m.prevLogIndex = req.Entries[len(req.Entries)-1].Index
+			// log.Debug("change prevLogIndex = ", m.prevLogIndex)
 		} else {
 			// heartbeat
 			m.Unlock()
@@ -246,7 +247,7 @@ func (m *member) heartbeat() {
 	stop := m.stop
 
 	ticker := time.NewTicker(m.server.config.HeartbeatInterval)
-	log.Debugf("peer.heartbeat: ", m.Id, m.server.config.HeartbeatInterval)
+	log.Debugf("heartbeat, id:%d heartbeatInterval:%dms", m.Id, m.server.config.HeartbeatInterval.Milliseconds())
 
 	for {
 		select {
@@ -294,10 +295,11 @@ func (m *member) heartbeat() {
 }
 
 func (m *member) flush() (err error) {
-	log.Debug("flush: ", m.Id)
+	// log.Debug("flush: ", m.Id)
 	prevLogIndex := m.getPrevLogIndex()
 	term := m.server.CurrentTerm()
 	entries, prevLogTerm := m.server.log.getEntriesAfter(prevLogIndex, m.server.config.MaxLogEntriesPerRequest)
+	// log.Debugf("flush, id:%d prevLogIndex:%d prevLogTerm:%d entries:%v", m.Id, prevLogIndex, prevLogTerm, entries)
 	if entries != nil {
 		err = m.sendAppendEntriesRequest(&pb.AppendEntriesRequest{
 			Term:         term,
