@@ -16,7 +16,7 @@ type Raft interface {
 	// 参数：
 	// 	commandName: 命令名
 	//	command: 命令数据
-	Do(commandName string, command []byte) (uint64, error)
+	Do(commandName string, command []byte) (done <-chan error)
 
 	// TakeSnapshot 生成快照
 	TakeSnapshot() error

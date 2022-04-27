@@ -207,57 +207,65 @@ func (s *server) Join(existing string) {
 	log.Info("join cluster success")
 }
 
-func (s *server) Do(commandName string, command []byte) (uint64, error) {
-	if !s.IsLeader() {
-		return 0, NotLeader
-	}
+func (s *server) Do(commandName string, command []byte) <-chan error {
+	done := make(chan error, 1)
 
-	cmd := s.cmdPool.Get().(*Command)
-	cmd.name = commandName
-	cmd.data = command
-	cmd.c = make(chan uint64, 1)
+	go func() {
+		if !s.IsLeader() {
+			done <- NotLeader
+			return
+		}
 
-	defer func() {
-		cmd.name = ""
-		cmd.data = []byte{}
-		s.cmdPool.Put(cmd)
+		cmd := s.cmdPool.Get().(*Command)
+		cmd.name = commandName
+		cmd.data = command
+		cmd.c = make(chan uint64, 1)
+
+		defer func() {
+			cmd.name = ""
+			cmd.data = []byte{}
+			s.cmdPool.Put(cmd)
+		}()
+
+		select {
+		case s.cmdChan <- cmd:
+		case <-s.stopped:
+			done <- StopError
+			return
+		default:
+			// cmdChan 通道阻塞，采用异步发送的方式
+			s.routineGroup.Add(1)
+			go func() {
+				defer s.routineGroup.Done()
+				select {
+				case s.cmdChan <- cmd:
+				case <-s.stopped:
+					done <- StopError
+					return
+				}
+			}()
+		}
+
+		var index uint64
+		select {
+		case <-s.stopped:
+			done <- StopError
+			return
+		case index = <-cmd.c:
+		}
+
+		if index == 0 {
+			done <- errors.New("execute error")
+			return
+		}
+
+		sub := s.log.Subscribe(index, s.config.SubscribeTTL)
+		_, err := sub.Listen()
+
+		done <- err
 	}()
 
-	select {
-	case s.cmdChan <- cmd:
-	case <-s.stopped:
-		return 0, StopError
-	default:
-		// cmdChan 通道阻塞，采用异步发送的方式
-		s.routineGroup.Add(1)
-		go func() {
-			defer s.routineGroup.Done()
-			select {
-			case s.cmdChan <- cmd:
-			case <-s.stopped:
-				return
-			}
-		}()
-	}
-
-	var index uint64
-	select {
-	case <-s.stopped:
-		return 0, StopError
-	case index = <-cmd.c:
-	}
-
-	if index == 0 {
-		return 0, errors.New("do error")
-	}
-
-	sub := s.log.Subscribe(index, s.config.SubscribeTTL)
-	_, err := sub.Listen()
-	if err != nil {
-		return 0, err
-	}
-
-	return index, nil
+	return done
 }
 
 // AppendEntries 用于leader进行日志复制与心跳检测
