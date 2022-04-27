@@ -138,15 +138,18 @@ func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (*
 
 	if req.Term > s.CurrentTerm() {
 		// 任期比对方小，成为跟随者
+		log.Debugf("req.Term > s.CurrentTerm()")
 		s.updateCurrentTerm(req.Term, 0)
 	} else if atomic.LoadUint64(&s.votedFor) != 0 && atomic.LoadUint64(&s.votedFor) != req.CandidateId {
 		// 已投过票，且投票对象不是req.CandidateId
+		log.Debugf("have been voted, votedFor:%d candidateId:%d", s.votedFor, req.CandidateId)
 		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
 	}
 
 	lastLogIndex, lastLogTerm := s.log.lastInfo()
 	if lastLogIndex > req.LastLogIndex || lastLogTerm > req.LastLogTerm {
-		// 当前节点的日志更新
+		// 当前节点的日志更新，不做投票
+		log.Debugf("local log is more newer")
 		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
 	}
 
@@ -236,7 +239,7 @@ func (s *server) Do(commandName string, command []byte) (uint64, error) {
 			}
 		}()
 	}
-	
+
 	var index uint64
 	select {
 	case <-s.stopped:
@@ -260,6 +263,10 @@ func (s *server) Do(commandName string, command []byte) (uint64, error) {
 // AppendEntries 用于leader进行日志复制与心跳检测
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest) (*pb.AppendEntriesResponse, error) {
 	// log.Debugf("AppendEntries, request: %v", *req)
+	//since := time.Now()
+	//defer func() {
+	//	log.Infof("time used:%d ms", time.Now().Sub(since).Milliseconds())
+	//}()
 
 	if !s.Running() {
 		return nil, StopError
@@ -284,6 +291,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 		s.locker.Unlock()
 	} else {
 		// update term and leaderId
+		log.Debug("update currentTerm, become follower")
 		s.updateCurrentTerm(req.Term, req.LeaderId)
 	}
 
@@ -313,6 +321,8 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 			Success:     false,
 		}, nil
 	}
+
+	log.Debugf("append entries: (prevLogIndex:%d entries:%d, currentIndex:%d)", req.PrevLogIndex, len(req.Entries), s.CurrentIndex())
 
 	if err := s.log.setCommitIndex(req.CommitIndex); err != nil {
 		log.Warn(err)
@@ -376,6 +386,7 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 	// 清除 LastIndex 之前的条目
 	_ = s.log.compact(req.LastIndex, req.LastTerm)
 
+	log.Debugf("update currentTerm, become follower")
 	s.updateCurrentTerm(req.LastTerm, req.LeaderId)
 
 	return &pb.SnapshotRecoveryResponse{
@@ -558,15 +569,13 @@ func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
 		s.setState(pb.NodeState_Follower)
 	}
 
-	s.log.SetCurrentTerm(term)
-
 	// 更新状态
 	s.locker.Lock()
 	defer s.locker.Unlock()
+
+	s.log.SetCurrentTerm(term)
 	s.leaderId = leaderId
-	if leaderId != 0 {
-		s.votedFor = 0
-	}
+	s.votedFor = 0
 }
 
 // loop 事件循环
@@ -605,6 +614,7 @@ func (s *server) followerLoop() {
 			// 超时未收到leader的心跳消息
 			if s.log.CurrentIndex() > 0 || s.MemberCount() == 1 {
 				// 从follower转变成candidate
+				log.Debugf("heartbeat timeout, currentIndex:%d change state from Follower to Candidate", s.log.CurrentIndex())
 				s.setState(pb.NodeState_Candidate)
 			} else {
 				update = true
@@ -677,7 +687,7 @@ func (s *server) candidateLoop() {
 				break
 			}
 			if resp.Term > s.CurrentTerm() {
-				log.Info("resp.Term > s.CurrentTerm")
+				log.Debug("resp.Term > s.CurrentTerm")
 				s.updateCurrentTerm(resp.Term, 0)
 			} else {
 				// 节点拒绝了对当前节点的投票
@@ -746,14 +756,15 @@ func (s *server) leaderLoop() {
 				break
 			}
 
-			if s.config.ReplicationType == Asynchronous {
-				// 异步复制，leader直接提交日志，并返回结果
+			if s.config.ReplicationType == Asynchronous || s.MemberCount() == 1 {
+				// 异步复制或集群中只有一个节点，leader直接提交日志，并返回结果
 				_ = s.log.setCommitIndex(entry.Index)
 			}
 
 		case resp := <-s.leaderRespChan:
 			if resp.Term > s.CurrentTerm() {
 				// 主动退位
+				log.Debug("resp.Term > s.CurrentTerm(), change from leader to follower")
 				s.updateCurrentTerm(resp.Term, 0)
 				break
 			}
@@ -808,6 +819,16 @@ func (s *server) snapshotLoop() {
 		}
 	}
 }
+
+//// voteFor 投票，如果已投过票，则投票失败
+//func (s *server) voteFor(id uint64) bool {
+//	return atomic.CompareAndSwapUint64(&s.votedFor, 0, id)
+//}
+//
+//// resetVote 重置选票（未投票状态）
+//func (s *server) resetVote() {
+//	atomic.SwapUint64(&s.votedFor, 0)
+//}
 
 func (s *server) addMember(mem pb.Member) {
 	// 不允许节点加入两次

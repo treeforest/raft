@@ -8,6 +8,7 @@ import (
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sync"
@@ -64,7 +65,7 @@ func (s *Server) Recovery(state []byte) error {
 func (s *Server) Apply(commandName string, command []byte) {
 	cmd := s.pool.Get().(*Command)
 	_ = json.Unmarshal(command, cmd)
-	log.Debugf("commandName:%s key:%s value:%s", commandName, cmd.Key, cmd.Value)
+	// log.Debugf("commandName:%s key:%s value:%s", commandName, cmd.Key, cmd.Value)
 	switch commandName {
 	case SET:
 		s.state[cmd.Key] = cmd.Value
@@ -162,14 +163,23 @@ func main() {
 	port := flag.Int("port", 0, "raft server port")
 	addr := flag.String("addr", "", "web address")
 	existing := flag.String("existing", "", "existing raft member")
+	openPprof := flag.Bool("p", false, "open pprof")
 	flag.Parse()
+
+	if *openPprof {
+		go func() {
+			if err := http.ListenAndServe(":8080", nil); err != nil {
+				panic(err)
+			}
+		}()
+	}
 
 	s := New()
 	log.SetLevel(log.INFO)
 
 	config := raft.DefaultConfig()
 	config.MemberId = uint64(*port)
-	config.Address = fmt.Sprintf("0.0.0.0:%d", *port)
+	config.Address = fmt.Sprintf("localhost:%d", *port)
 	config.LogPath = fmt.Sprintf("%d", *port)
 	config.URL = `http://` + *addr
 
@@ -195,6 +205,8 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, os.Kill)
 	<-done
-	peer.Stop()
-	time.Sleep(time.Millisecond * 500)
+	go func() {
+		peer.Stop()
+	}()
+	time.Sleep(time.Millisecond * 1000)
 }

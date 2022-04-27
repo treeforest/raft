@@ -168,7 +168,7 @@ func (l *Log) open(path string) error {
 		if entry.Index <= l.commitIndex {
 			l.ApplyFunc(entry.CommandName, entry.Command)
 		}
-		log.Debug("append log index ", entry.Index)
+		// log.Debug("append log index ", entry.Index)
 		index++
 	}
 
@@ -239,7 +239,11 @@ func (l *Log) getEntriesAfter(index uint64, maxLogEntriesPerRequest uint64) ([]p
 	// If we're going from the beginning of the log then return the whole log.
 	if index == l.startIndex {
 		// log.Debug("log.entriesAfter.beginning: ", index, " ", l.startIndex)
-		return l.entries, l.startTerm
+		if uint64(len(l.entries)) < maxLogEntriesPerRequest {
+			return l.entries, l.startTerm
+		} else {
+			return l.entries[:maxLogEntriesPerRequest], l.startTerm
+		}
 	}
 
 	entries := l.entries[index-l.startIndex:]
@@ -304,7 +308,7 @@ func (l *Log) setCommitIndex(index uint64) error {
 	defer l.mutex.Unlock()
 
 	if index > l.startIndex+uint64(len(l.entries)) {
-		log.Debug("Commit index", index, "set back to ", len(l.entries))
+		log.Debugf("commit index %d is more, set back to %d", index, l.startIndex+uint64(len(l.entries)))
 		index = l.startIndex + uint64(len(l.entries))
 	}
 
@@ -320,7 +324,7 @@ func (l *Log) setCommitIndex(index uint64) error {
 		// Update commit index.
 		l.commitIndex = entry.Index
 		l.flushCommitIndex()
-		log.Debugf("update commitIndex: %d", l.commitIndex)
+		// log.Debugf("update commitIndex: %d", l.commitIndex)
 
 		l.publish(entry.Index)
 
@@ -353,7 +357,7 @@ func (l *Log) truncate(index uint64, term uint64) error {
 	// 要截断的日志超出当前日志范围，返回错误
 	if index > l.startIndex+uint64(len(l.entries)) {
 		log.Debug("log.truncate.after")
-		return fmt.Errorf("entry index does not exist (MAX=%v): (IDX=%v, TERM=%v)", len(l.entries), index, term)
+		return fmt.Errorf("entry index does not exist : (startIndex:%d, entries=%d, index=%v, term=%v)", l.startIndex, len(l.entries), index, term)
 	}
 
 	// 开始截断操作
@@ -383,21 +387,45 @@ func (l *Log) truncate(index uint64, term uint64) error {
 
 // Appends a series of entries to the log.
 func (l *Log) appendEntries(entries []pb.LogEntry) error {
+	if l.levelDB == nil {
+		return errors.New("log is not open")
+	}
+
+	if len(entries) == 0 {
+		return nil
+	}
+
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
-	var err error
-	// Append each Entry but exit if we hit an error.
-	for _, entry := range entries {
-		if err = l.writeEntry(&entry); err != nil {
-			return err
-		}
-		log.Debugf("append entry, term:%d index:%d", entry.Term, entry.Index)
-	}
-
+	// 开启事务
+	tx, err := l.levelDB.OpenTransaction()
 	if err != nil {
 		panic(err)
 	}
+	defer tx.Discard()
+
+	// 批量写
+	for _, entry := range entries {
+		indexBytes := uint64ToBytes(entry.Index)
+		data, _ := entry.Marshal()
+		if err = tx.Put(indexBytes, data, nil); err != nil {
+			panic(err)
+		}
+	}
+
+	lastEntryIndexBytes := uint64ToBytes(entries[len(entries)-1].Index)
+	err = tx.Put([]byte(lastEntryIndex), lastEntryIndexBytes, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// 执行事务
+	if err = tx.Commit(); err != nil {
+		panic(err)
+	}
+
+	l.entries = append(l.entries, entries...)
 
 	return nil
 }

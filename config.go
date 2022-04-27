@@ -17,7 +17,10 @@ type Config struct {
 	// URL 节点相关的url地址
 	URL string
 
-	// MaxLogEntriesPerRequest 每次最多请求的日志条目
+	// MaxLogEntriesPerRequest 每次最多请求的日志条目，该参数与 HeartbeatTimeout 相关。
+	// 由于心跳操作采用的是同步的机制，当发送 MaxLogEntriesPerRequest 条日志条目的时间
+	// 大于 HeartbeatTimeout 时，将会导致集群再次进入投票环节，影响整体性能。大约200条日志
+	// 条目在局域网内的RPC响应在400ms左右。
 	MaxLogEntriesPerRequest uint64
 
 	// NumberOfLogEntriesAfterSnapshot 在保存快照后仍然保留的日志条目数量
@@ -58,10 +61,10 @@ func DefaultConfig() *Config {
 	return &Config{
 		MemberId:                        uint64(snowflake.Generate()),
 		Address:                         "localhost:4399",
-		MaxLogEntriesPerRequest:         2000,
+		MaxLogEntriesPerRequest:         200,
 		NumberOfLogEntriesAfterSnapshot: 200,
 		HeartbeatInterval:               time.Millisecond * 100,
-		HeartbeatTimeout:                time.Millisecond * 1000,
+		HeartbeatTimeout:                time.Millisecond * 1500,
 		ElectionTimeout:                 time.Millisecond * 1000,
 		DialTimeout:                     time.Millisecond * 1000,
 		DialOptions: []grpc.DialOption{
