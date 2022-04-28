@@ -24,21 +24,21 @@ var (
 )
 
 type server struct {
-	grpcServer            *grpc.Server                   // grpc server
-	locker                sync.RWMutex                   // 读写锁
-	config                *Config                        // 配置文件
-	stateMachine          StateMachine                   // 状态机
-	pendingSnapshot       *Snapshot                      // 待存储的快照
-	snapshot              *Snapshot                      // 最新快照
-	votedFor              uint64                         // 选票投给了哪个候选人
-	log                   *Log                           // 日志对象
-	members               sync.Map                       // members in cluster
-	state                 pb.NodeState                   // 节点的当前状态,follower/candidate/leaderId/snapshotting/state/initialized
-	stopped               chan struct{}                  // 停止信号
-	routineGroup          sync.WaitGroup                 // 保证协程能够安全退出
-	leaderId              uint64                         // 当state为follower时，设置为leader的id
-	followerHeartbeatChan chan bool                      // follower用于更新与leader之间的心跳
-	leaderRespChan        chan *pb.AppendEntriesResponse // leaderId loop use
+	grpcServer            *grpc.Server                // grpc server
+	locker                sync.RWMutex                // 读写锁
+	config                *Config                     // 配置文件
+	stateMachine          StateMachine                // 状态机
+	pendingSnapshot       *Snapshot                   // 待存储的快照
+	snapshot              *Snapshot                   // 最新快照
+	votedFor              uint64                      // 选票投给了哪个候选人
+	log                   *Log                        // 日志对象
+	memberMgr             *memberManager              // 集群中节点的管理（不包括自身节点）
+	state                 pb.NodeState                // 节点的当前状态,follower/candidate/leaderId/snapshotting/state/initialized
+	stopped               chan struct{}               // 停止信号
+	routineGroup          sync.WaitGroup              // 保证协程能够安全退出
+	leaderId              uint64                      // 当state为follower时，设置为leader的id
+	followerHeartbeatChan chan bool                   // follower用于更新与leader之间的心跳
+	leaderRespChan        chan *AppendEntriesResponse // leaderId loop use
 	cmdChan               chan *Command
 	cmdPool               *sync.Pool
 }
@@ -56,12 +56,12 @@ func New(config *Config, stateMachine StateMachine) Raft {
 		snapshot:              nil,
 		votedFor:              0,
 		log:                   newLog(config.LogPath, stateMachine.Apply),
-		members:               sync.Map{},
+		memberMgr:             newMemberManager(),
 		stopped:               make(chan struct{}, 1),
 		routineGroup:          sync.WaitGroup{},
 		leaderId:              0,
 		followerHeartbeatChan: make(chan bool, 256),
-		leaderRespChan:        make(chan *pb.AppendEntriesResponse, 1024),
+		leaderRespChan:        make(chan *AppendEntriesResponse, 1024),
 		cmdChan:               make(chan *Command, 1024),
 		cmdPool:               &pool,
 	}
@@ -410,10 +410,10 @@ func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (*pb
 		if m.Id == s.ID() {
 			continue
 		}
-		if _, ok := s.members.Load(m.Id); ok {
+		if s.memberMgr.Exist(m.Id) {
 			continue
 		}
-		s.members.Store(m.Id, newMember(m, s))
+		s.memberMgr.Store(newMember(m, s))
 		log.Infof("add member %d %s", m.Id, m.Address)
 	}
 	return &pb.MembershipResponse{Success: true}, nil
@@ -475,8 +475,7 @@ func (s *server) Stop() {
 // leaveCluster 离开集群
 func (s *server) leaveCluster() {
 	if s.IsLeader() {
-		s.members.Range(func(key, value interface{}) bool {
-			m := value.(*member)
+		s.memberMgr.Range(func(m *member) bool {
 			_ = m.sendRemoveMemberRequest(&pb.MemberRequest{Leader: true, Member: s.Self()})
 			return true
 		})
@@ -487,12 +486,11 @@ func (s *server) leaveCluster() {
 		return
 	}
 
-	value, ok := s.members.Load(s.leaderId)
+	leader, ok := s.memberMgr.Load(s.leaderId)
 	if !ok {
 		return
 	}
 
-	leader := value.(*member)
 	_ = leader.sendRemoveMemberRequest(&pb.MemberRequest{Leader: false, Member: s.Self()})
 }
 
@@ -503,22 +501,26 @@ func (s *server) IsLeader() bool {
 }
 
 func (s *server) LeaderId() uint64 {
-	s.locker.RLock()
-	defer s.locker.RUnlock()
-	return s.leaderId
+	switch s.State() {
+	case pb.NodeState_Leader:
+		return s.ID()
+	case pb.NodeState_Follower:
+		return s.leaderId
+	default:
+		return 0
+	}
 }
 
 func (s *server) LeaderAddress() string {
-	address := ""
-	s.members.Range(func(key, value interface{}) bool {
-		m := value.(*member)
-		if m.Id == s.leaderId {
-			address = m.Address
-			return false
-		}
-		return true
-	})
-	return address
+	switch s.State() {
+	case pb.NodeState_Leader:
+		return s.Address()
+	case pb.NodeState_Follower:
+		m, _ := s.memberMgr.Load(s.leaderId)
+		return m.Address
+	default:
+		return ""
+	}
 }
 
 // CurrentTerm 获取的当前任期
@@ -566,8 +568,7 @@ func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
 
 	if s.State() == pb.NodeState_Leader {
 		// 如果是leader，则停止所有心跳
-		s.members.Range(func(key, value interface{}) bool {
-			m := value.(*member)
+		s.memberMgr.Range(func(m *member) bool {
 			m.stopHeartbeat(false)
 			return true
 		})
@@ -660,8 +661,9 @@ func (s *server) candidateLoop() {
 				LastLogTerm:  lastLogTerm,
 				LastLogIndex: lastLogIndex,
 			}
+
 			// 向连接的节点发送请求选票的消息
-			s.members.Range(func(key, value interface{}) bool {
+			s.memberMgr.Range(func(m *member) bool {
 				s.routineGroup.Add(1)
 				go func(m *member) {
 					defer s.routineGroup.Done()
@@ -669,7 +671,7 @@ func (s *server) candidateLoop() {
 						// 投票时以能连接的节点为目标，采用强一致性方式，不能通信的就移除
 						s.removeMember(m.Id)
 					}
-				}(value.(*member))
+				}(m)
 				return true
 			})
 
@@ -712,9 +714,8 @@ func (s *server) candidateLoop() {
 // 1、成员保活 2、发送日志条目 3、日志提交
 func (s *server) leaderLoop() {
 	memberCount := s.MemberCount()
-	s.leaderRespChan = make(chan *pb.AppendEntriesResponse, memberCount)
-	s.members.Range(func(key, value interface{}) bool {
-		m := value.(*member)
+	s.leaderRespChan = make(chan *AppendEntriesResponse, memberCount)
+	s.memberMgr.Range(func(m *member) bool {
 		m.setPrevLogIndex(s.log.CurrentIndex())
 		m.startHeartbeat()
 		return true
@@ -735,11 +736,13 @@ func (s *server) leaderLoop() {
 		}
 	}()
 
+	// 已同步了commit后的日志条目的节点数（）
+	syncedMember := make(map[uint64]struct{}, s.MemberCount())
+
 	for s.State() == pb.NodeState_Leader {
 		select {
 		case <-s.stopped:
-			s.members.Range(func(key, value interface{}) bool {
-				m := value.(*member)
+			s.memberMgr.Range(func(m *member) bool {
 				m.stopHeartbeat(false)
 				return true
 			})
@@ -785,23 +788,31 @@ func (s *server) leaderLoop() {
 
 			switch s.config.ReplicationType {
 			case Synchronous:
+				syncedMember[resp.Id] = struct{}{}
+
 				// 检查超过半数的条件
+				if len(syncedMember)+1 < s.QuorumSize() {
+					continue
+				}
+
+				// 找到(1/2+1)个节点都确认的日志条目索引
 				var indices []uint64
 				indices = append(indices, s.log.CurrentIndex())
-				s.members.Range(func(key, value interface{}) bool {
-					indices = append(indices, value.(*member).getPrevLogIndex())
+				s.memberMgr.Range(func(m *member) bool {
+					indices = append(indices, m.getPrevLogIndex())
 					return true
 				})
-				sort.Sort(sort.Reverse(Uint64Slice(indices))) // 从大到小排序
 
+				sort.Sort(sort.Reverse(Uint64Slice(indices))) // 从大到小排序
 				commitIndex := indices[s.QuorumSize()-1]
-				if commitIndex > s.log.CommitIndex() {
-					s.locker.Lock()
-					// 更新 commitIndex
-					_ = s.log.setCommitIndex(commitIndex)
-					s.locker.Unlock()
-					// log.Infof("update commitIndex: %d", commitIndex)
-				}
+
+				// 更新 commitIndex
+				s.locker.Lock()
+				_ = s.log.setCommitIndex(commitIndex)
+				s.locker.Unlock()
+
+				// 重置
+				syncedMember = make(map[uint64]struct{}, s.MemberCount())
 
 			case Semisynchronous:
 				s.locker.Lock()
@@ -840,7 +851,7 @@ func (s *server) snapshotLoop() {
 
 func (s *server) addMember(mem pb.Member) {
 	// 不允许节点加入两次
-	if _, ok := s.members.Load(mem.Id); ok {
+	if s.memberMgr.Exist(mem.Id) {
 		return
 	}
 
@@ -850,13 +861,16 @@ func (s *server) addMember(mem pb.Member) {
 
 	m := newMember(mem, s)
 
+	// 再次检查是否添加成功
+	if ok := s.memberMgr.Store(m); !ok {
+		return
+	}
+	log.Infof("add member %d %s", m.Id, m.Address)
+
 	if s.State() == pb.NodeState_Leader {
 		m.setPrevLogIndex(s.log.CurrentIndex())
 		m.startHeartbeat()
 	}
-
-	log.Infof("add member %d %s", m.Id, m.Address)
-	s.members.Store(m.Id, m)
 
 	// 将节点加入集群的消息采用 gossip 的方式广播到整个网络
 	if s.IsLeader() {
@@ -872,10 +886,10 @@ func (s *server) addMember(mem pb.Member) {
 			Leader: true,
 			Member: mem,
 		}
-		s.members.Range(func(_, v interface{}) bool {
-			go func() {
-				_ = v.(*member).sendAddMemberRequest(req)
-			}()
+		s.memberMgr.Range(func(m *member) bool {
+			go func(m *member) {
+				_ = m.sendAddMemberRequest(req)
+			}(m)
 			return true
 		})
 	}
@@ -886,14 +900,14 @@ func (s *server) removeMember(id uint64) {
 		return
 	}
 
-	val, loaded := s.members.LoadAndDelete(id)
+	m, loaded := s.memberMgr.Delete(id)
 	if !loaded {
 		return
 	}
+
 	log.Infof("remove member %d", id)
 
 	if s.IsLeader() {
-		m := val.(*member)
 		s.routineGroup.Add(1)
 		go func() {
 			defer s.routineGroup.Done()
@@ -901,10 +915,10 @@ func (s *server) removeMember(id uint64) {
 		}()
 
 		req := &pb.MemberRequest{Leader: true, Member: m.Member}
-		s.members.Range(func(_, v interface{}) bool {
-			go func() {
-				_ = v.(*member).sendRemoveMemberRequest(req)
-			}()
+		s.memberMgr.Range(func(m *member) bool {
+			go func(m *member) {
+				_ = m.sendRemoveMemberRequest(req)
+			}(m)
 			return true
 		})
 	}
@@ -912,20 +926,15 @@ func (s *server) removeMember(id uint64) {
 
 func (s *server) Members() []pb.Member {
 	members := []pb.Member{s.Self()}
-	s.members.Range(func(key, value interface{}) bool {
-		members = append(members, value.(*member).Member)
+	s.memberMgr.Range(func(m *member) bool {
+		members = append(members, m.Member)
 		return true
 	})
 	return members
 }
 
 func (s *server) MemberCount() int {
-	count := 1 // 自身节点
-	s.members.Range(func(key, value interface{}) bool {
-		count++
-		return true
-	})
-	return count
+	return s.memberMgr.Count() + 1
 }
 
 // QuorumSize 日志提交需要超过半数的节点（n/2+1）

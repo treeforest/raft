@@ -90,7 +90,9 @@ message AppendEntriesRequest {
 message AppendEntriesResponse{
   // term 接收者的 currentTerm
   uint64 term = 1;
+  // index 接收者的 currentIndex
   uint64 index = 2;
+  // commitIndex 接收者的 commitIndex
   uint64 commitIndex = 3;
   // success true/false.如果Follower的日志包含有prevLogIndex和
   // prevLogTerm处的日志，则返回true

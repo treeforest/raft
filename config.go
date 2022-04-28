@@ -63,7 +63,7 @@ func DefaultConfig() *Config {
 		Address:                         "localhost:4399",
 		MaxLogEntriesPerRequest:         200,
 		NumberOfLogEntriesAfterSnapshot: 200,
-		HeartbeatInterval:               time.Millisecond * 100,
+		HeartbeatInterval:               time.Millisecond * 150,
 		HeartbeatTimeout:                time.Millisecond * 1500,
 		ElectionTimeout:                 time.Millisecond * 1000,
 		DialTimeout:                     time.Millisecond * 1000,

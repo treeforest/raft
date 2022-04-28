@@ -104,7 +104,7 @@ func (m *member) sendAppendEntriesRequest(req *pb.AppendEntriesRequest) error {
 	m.Unlock()
 
 	// 通知server处理AppendEntriesResponse
-	m.server.leaderRespChan <- resp
+	m.server.leaderRespChan <- &AppendEntriesResponse{AppendEntriesResponse: resp, Id: m.Id}
 
 	return nil
 }

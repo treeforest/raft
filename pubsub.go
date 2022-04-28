@@ -69,7 +69,7 @@ func (ps *PubSub) Subscribe(topic string, ttl time.Duration) Subscription {
 	}
 
 	ps.Lock()
-	// Add subscription to subscriptions map
+	// Store subscription to subscriptions map
 	s, exists := ps.subscriptions[topic]
 	// If no subscription set for the topic exists, create one
 	if !exists {
@@ -78,7 +78,7 @@ func (ps *PubSub) Subscribe(topic string, ttl time.Duration) Subscription {
 	}
 	ps.Unlock()
 
-	// Add the subscription
+	// Store the subscription
 	s.Add(sub)
 
 	// When the timeout expires, remove the subscription
