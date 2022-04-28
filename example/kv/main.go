@@ -64,18 +64,19 @@ func (s *Server) Recovery(state []byte) error {
 
 // Apply 状态机执行命令的回调函数
 func (s *Server) Apply(commandName string, command []byte) {
-	cmd := s.cmdPool.Get().(*Command)
-	_ = json.Unmarshal(command, &cmd)
-
-	switch commandName {
-	case SET:
-		s.state[cmd.Key] = cmd.Value
-	case DEL:
-		delete(s.state, cmd.Key)
-	}
-
-	*cmd = Command{}
-	s.cmdPool.Put(cmd)
+	return
+	//cmd := s.cmdPool.Get().(*Command)
+	//_ = json.Unmarshal(command, &cmd)
+	//
+	//switch commandName {
+	//case SET:
+	//	s.state[cmd.Key] = cmd.Value
+	//case DEL:
+	//	delete(s.state, cmd.Key)
+	//}
+	//
+	//*cmd = Command{}
+	//s.cmdPool.Put(cmd)
 }
 
 func (s *Server) Serve(addr string) {

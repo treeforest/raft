@@ -8,7 +8,6 @@ import (
 	"github.com/treeforest/raft/pb"
 	"io"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -53,11 +52,11 @@ func newLog(path string, applyFunc func(string, []byte)) *Log {
 }
 
 func (l *Log) Subscribe(index uint64, ttl time.Duration) Subscription {
-	return l.ps.Subscribe(strconv.FormatUint(index, 10), ttl)
+	return l.ps.Subscribe(index, ttl)
 }
 
 func (l *Log) publish(index uint64) {
-	_ = l.ps.Publish(strconv.FormatUint(index, 10), struct{}{})
+	_ = l.ps.Publish(index, struct{}{})
 }
 
 // CommitIndex the last committed index in the log.
