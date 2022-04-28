@@ -513,7 +513,7 @@ func (l *Log) encodeLogEntry(w io.Writer, e *pb.LogEntry) (int, error) {
 		return -1, err
 	}
 
-	if _, err = fmt.Fprintf(w, "%8x\n", len(b)); err != nil {
+	if _, err = fmt.Fprintf(w, "%08x", len(b)); err != nil {
 		return -1, err
 	}
 
@@ -523,7 +523,7 @@ func (l *Log) encodeLogEntry(w io.Writer, e *pb.LogEntry) (int, error) {
 func (l *Log) decodeLogEntry(r io.Reader, e *pb.LogEntry) (int, error) {
 	var length int = 0
 
-	_, err := fmt.Fscanf(r, "%8x\n", &length)
+	_, err := fmt.Fscanf(r, "%08x", &length)
 	if err != nil {
 		return -1, err
 	}

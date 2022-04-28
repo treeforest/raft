@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -944,7 +945,7 @@ func (s *server) CurrentTerm() uint64 {
 
 // snapshotPath 快照路径
 func (s *server) snapshotPath(lastIndex, lastTerm uint64) string {
-	return path.Join(s.config.SnapshotPath, "snapshot", fmt.Sprintf("%d_%d.ss", lastTerm, lastIndex))
+	return filepath.Join(s.config.SnapshotPath, "snapshot", fmt.Sprintf("%d_%d.ss", lastTerm, lastIndex))
 }
 
 // TakeSnapshot 创建快照

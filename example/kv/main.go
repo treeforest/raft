@@ -28,26 +28,24 @@ type Command struct {
 }
 
 type Server struct {
-	raft.StateMachine
-	peer   raft.Raft
-	r      *gin.Engine
-	state  map[string]string
-	locker sync.RWMutex
-	pool   *sync.Pool
-	ch     chan *Command
+	peer    raft.Raft
+	r       *gin.Engine
+	state   map[string]string
+	locker  sync.RWMutex
+	cmdPool sync.Pool
 }
 
 func New() *Server {
-	return &Server{
+	s := &Server{
 		state:  map[string]string{},
 		locker: sync.RWMutex{},
-		pool: &sync.Pool{
+		cmdPool: sync.Pool{
 			New: func() interface{} {
 				return new(Command)
 			},
 		},
-		ch: make(chan *Command, 1024),
 	}
+	return s
 }
 
 // Save 读取状态机快照
@@ -66,27 +64,24 @@ func (s *Server) Recovery(state []byte) error {
 
 // Apply 状态机执行命令的回调函数
 func (s *Server) Apply(commandName string, command []byte) {
-	//
-}
+	cmd := s.cmdPool.Get().(*Command)
+	_ = json.Unmarshal(command, &cmd)
 
-func (s *Server) handle(commandName string, command []byte) {
-	cmd := s.pool.Get().(*Command)
-	_ = json.Unmarshal(command, cmd)
-
-	// log.Debugf("commandName:%s key:%s value:%s", commandName, cmd.Key, cmd.Value)
 	switch commandName {
 	case SET:
 		s.state[cmd.Key] = cmd.Value
 	case DEL:
 		delete(s.state, cmd.Key)
 	}
-	s.pool.Put(cmd)
+
+	*cmd = Command{}
+	s.cmdPool.Put(cmd)
 }
 
 func (s *Server) Serve(addr string) {
 	r := gin.Default()
 	r.POST("/test", func(c *gin.Context) {
-		cmd := s.pool.Get().(*Command)
+		cmd := &Command{}
 		cmd.Key = "hello"
 		cmd.Value = "world"
 		data, _ := json.Marshal(cmd)
@@ -124,6 +119,8 @@ func (s *Server) Serve(addr string) {
 		used := time.Now().Sub(since).Milliseconds()
 		done <- struct{}{}
 
+		s.peer.TakeSnapshot()
+
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"detail": fmt.Sprintf("count:%d success:%d used:%dms average:%dms",
@@ -136,7 +133,7 @@ func (s *Server) Serve(addr string) {
 			return
 		}
 
-		cmd := s.pool.Get().(*Command)
+		cmd := &Command{}
 		cmd.Key = c.Query("key")
 		cmd.Value = c.Query("value")
 		data, _ := json.Marshal(cmd)
@@ -155,7 +152,7 @@ func (s *Server) Serve(addr string) {
 			return
 		}
 
-		cmd := s.pool.Get().(*Command)
+		cmd := &Command{}
 		cmd.Key = c.Query("key")
 		data, _ := json.Marshal(cmd)
 
