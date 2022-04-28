@@ -35,10 +35,4 @@ type Raft interface {
 
 	// LeaderAddress 集群中leader的地址
 	LeaderAddress() string
-
-	// CurrentTerm 当前任期
-	CurrentTerm() uint64
-
-	// CurrentIndex 当前最新日志条目的索引
-	CurrentIndex() uint64
 }

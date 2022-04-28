@@ -249,6 +249,9 @@ func (m *member) heartbeat() {
 	ticker := time.NewTicker(m.server.config.HeartbeatInterval)
 	log.Debugf("heartbeat, id:%d heartbeatInterval:%dms", m.Id, m.server.config.HeartbeatInterval.Milliseconds())
 
+	// 确保定时器触发的间隔不会导致新任期的出现
+	_ = m.flush()
+
 	for {
 		select {
 		case flush := <-stop:

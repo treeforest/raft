@@ -1,59 +1,63 @@
 package raft
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	log "github.com/treeforest/logger"
 	"github.com/treeforest/raft/pb"
+	"io"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 )
 
-const (
-	commitIndexKey = "__commit_index_key__"
-	startIndexKey  = "__start_index_key__"
-	startTermKey   = "__start_term_key__"
-	lastEntryIndex = "__last_entry_key__"
-	currentTermKey = "__latest_term_key__"
-)
+/*
+日志文件结构：
+commitIndex(16字节) + /n: commitIndex
+日志条目：
+	length(8字节) + /n
+	data(长度为length)
+*/
 
 type notify []<-chan struct{}
 
 // Log a log is a collection of log entries that are persisted to durable storage.
 type Log struct {
 	ApplyFunc   func(commandName string, command []byte)
-	levelDB     *leveldb.DB
+	mutex       sync.RWMutex
+	file        *os.File
 	path        string
 	entries     []pb.LogEntry
+	positions   []int64 // 日志条目的位置
 	commitIndex uint64
-	mutex       sync.RWMutex
 	startIndex  uint64 // the index before the first Entry in the Log entries
 	startTerm   uint64
-	currentTerm uint64
 	initialized bool
-	pubsub      *PubSub
+	ps          *PubSub
 }
 
 // newLog creates a new log.
 func newLog(path string, applyFunc func(string, []byte)) *Log {
 	l := &Log{
-		ApplyFunc: applyFunc,
-		entries:   make([]pb.LogEntry, 0),
-		pubsub:    NewPubSub(),
+		ApplyFunc:   applyFunc,
+		entries:     make([]pb.LogEntry, 0),
+		positions:   make([]int64, 0),
+		startIndex:  0,
+		startTerm:   0,
+		initialized: false,
+		ps:          NewPubSub(),
 	}
 	return l
 }
 
 func (l *Log) Subscribe(index uint64, ttl time.Duration) Subscription {
-	return l.pubsub.Subscribe(strconv.FormatUint(index, 10), ttl)
+	return l.ps.Subscribe(strconv.FormatUint(index, 10), ttl)
 }
 
 func (l *Log) publish(index uint64) {
-	_ = l.pubsub.Publish(strconv.FormatUint(index, 10), struct{}{})
+	_ = l.ps.Publish(strconv.FormatUint(index, 10), struct{}{})
 }
 
 // CommitIndex the last committed index in the log.
@@ -90,31 +94,14 @@ func (l *Log) isEmpty() bool {
 	return (len(l.entries) == 0) && (l.startIndex == 0)
 }
 
-func (l *Log) nextTerm() uint64 {
-	return l.CurrentTerm() + 1
-}
-
-func (l *Log) CurrentTerm() uint64 {
+func (l *Log) currentTerm() uint64 {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
-	return l.currentTerm
-}
 
-func (l *Log) SetCurrentTerm(term uint64) {
-	err := l.levelDB.Put([]byte(currentTermKey), uint64ToBytes(term), nil)
-	if err != nil {
-		log.Fatal(err)
+	if len(l.entries) == 0 {
+		return l.startTerm
 	}
-
-	l.mutex.Lock()
-	l.currentTerm = term
-	l.mutex.Unlock()
-}
-
-func (l *Log) SetNextTerm() uint64 {
-	term := l.nextTerm()
-	l.SetCurrentTerm(term)
-	return term
+	return l.entries[len(l.entries)-1].Term
 }
 
 // open it opens the log levelDB and reads existing entries. The log can remain open and
@@ -122,54 +109,65 @@ func (l *Log) SetNextTerm() uint64 {
 func (l *Log) open(path string) error {
 	var err error
 	// open log levelDB
-	l.levelDB, err = leveldb.OpenFile(path, &opt.Options{})
-	if err != nil {
-		log.Fatalf("open levelDB failed: %v", err)
-	}
+	l.file, err = os.OpenFile(path, os.O_RDWR, 0600)
 	l.path = path
 
-	// Read the levelDB and decode entries.
-	l.startIndex, err = l.getUint64Value(startIndexKey)
 	if err != nil {
-		log.Fatal("get startIndex failed: ", err)
-	}
-	l.startTerm, err = l.getUint64Value(startTermKey)
-	if err != nil {
-		log.Fatal("get startTerm failed: ", err)
-	}
-	l.commitIndex, err = l.getUint64Value(commitIndexKey)
-	if err != nil {
-		log.Fatal("get commitIndex failed: ", err)
-	}
-	l.currentTerm, err = l.getUint64Value(currentTermKey)
-	if err != nil {
-		log.Fatal("get currentTerm failed: ", err)
+		if os.IsNotExist(err) {
+			l.file, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+			if err == nil {
+				// step over commit index
+				_, _ = l.file.Seek(16+1, os.SEEK_SET)
+				l.initialized = true
+			}
+			return err
+		}
+		return err
 	}
 
-	index, end := l.startIndex+1, l.commitIndex
-	var value []byte
-	for index <= end {
-		value, err = l.levelDB.Get(uint64ToBytes(index), nil)
-		if err != nil {
-			log.Fatalf("recover failed, get key error: %v ", err)
+	r := bufio.NewReader(l.file)
+
+	// load commit index
+	_, err = fmt.Fscanf(r, "%016x\n", &l.commitIndex)
+	if err != nil {
+		if err == io.EOF {
+			return nil
 		}
+		log.Errorf("load commit index failed: %v", err)
+		return err
+	}
+	log.Info("load commitIndex: ", l.commitIndex)
+
+	var readBytes int64 = 16 + 1
+	var n int
+
+	for {
+		position, _ := l.file.Seek(0, os.SEEK_CUR)
 
 		entry := pb.LogEntry{}
-		if err = entry.Unmarshal(value); err != nil {
-			log.Fatalf("recover failed, unmarshal entry error: %v", err)
+
+		n, err = l.decodeLogEntry(r, &entry)
+		if err != nil {
+			if err != io.EOF {
+				log.Error("decode log entry failed: ", err)
+				l.commitIndex = 0
+				if err = os.Truncate(path, readBytes); err != nil {
+					return fmt.Errorf("unable recover: %v", err)
+				}
+			}
+			break
 		}
 
-		if entry.Index != index {
-			log.Fatalf("recover failed, entryIndex[%d] != index[%d]", entry.Index, index)
+		if entry.Index > l.startIndex {
+			// append entry
+			l.entries = append(l.entries, entry)
+			l.positions = append(l.positions, position)
+			if entry.Index <= l.commitIndex {
+				l.ApplyFunc(entry.CommandName, entry.Command)
+			}
 		}
 
-		// Append Entry.
-		l.entries = append(l.entries, entry)
-		if entry.Index <= l.commitIndex {
-			l.ApplyFunc(entry.CommandName, entry.Command)
-		}
-		// log.Debug("append log index ", entry.Index)
-		index++
+		readBytes += int64(n)
 	}
 
 	log.Debug("recovery number of log ", len(l.entries))
@@ -177,27 +175,16 @@ func (l *Log) open(path string) error {
 	return nil
 }
 
-func (l *Log) getUint64Value(key string) (uint64, error) {
-	value, err := l.levelDB.Get([]byte(key), nil)
-	if err != nil {
-		if err == leveldb.ErrNotFound {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return bytesToUint64(value)
-}
-
-// Closes the log levelDB.
+// Closes the log file.
 func (l *Log) close() {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
-	if l.levelDB != nil {
-		_ = l.levelDB.Close()
-		l.levelDB = nil
+	if l.file != nil {
+		_ = l.file.Close()
+		l.file = nil
 	}
-	l.entries = make([]pb.LogEntry, 0)
+	l.entries = []pb.LogEntry{}
 }
 
 // getEntry retrieves an Entry from the log. If the Entry has been eliminated
@@ -296,9 +283,12 @@ func (l *Log) lastInfo() (index uint64, term uint64) {
 func (l *Log) updateCommitIndex(index uint64) {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-	if index > l.commitIndex {
-		l.commitIndex = index
+	if index < l.commitIndex {
+		return
 	}
+
+	l.commitIndex = index
+	l.flushCommitIndex()
 	log.Debug("update.commit.index ", index)
 }
 
@@ -339,7 +329,9 @@ func (l *Log) setCommitIndex(index uint64) error {
 // Set the commitIndex at the head of the log levelDB to the current
 // commit Index. This should be called after obtained a log lock
 func (l *Log) flushCommitIndex() {
-	_ = l.levelDB.Put([]byte(commitIndexKey), uint64ToBytes(l.commitIndex), nil)
+	_, _ = l.file.Seek(0, os.SEEK_SET)
+	_, _ = fmt.Fprintf(l.file, "%016x\n", l.commitIndex)
+	_, _ = l.file.Seek(0, os.SEEK_END)
 }
 
 // truncate 截断index之后的未提交的所有日志条目，如果已提交或超出日志范围，则返回错误
@@ -363,6 +355,8 @@ func (l *Log) truncate(index uint64, term uint64) error {
 	// 开始截断操作
 	if index == l.startIndex {
 		// log.Debug("log.truncate.clear")
+		_ = l.file.Truncate(0)
+		_, _ = l.file.Seek(16+1, os.SEEK_SET)
 		l.entries = []pb.LogEntry{}
 	} else {
 		// 相同索引，却是不同任期，则不进行截断，并返回错误
@@ -375,10 +369,13 @@ func (l *Log) truncate(index uint64, term uint64) error {
 		// 截断所要求的条目
 		if index < l.startIndex+uint64(len(l.entries)) {
 			log.Debug("log.truncate.finish")
-			for i := index - l.startIndex; i < uint64(len(l.entries)); i++ {
-				_ = l.levelDB.Delete(uint64ToBytes(l.entries[i].Index), nil)
-			}
+
+			position := l.positions[index-l.startIndex]
+			_ = l.file.Truncate(position)
+			_, _ = l.file.Seek(position, os.SEEK_SET)
+
 			l.entries = l.entries[0 : index-l.startIndex]
+			l.positions = l.positions[0 : index-l.startIndex]
 		}
 	}
 
@@ -387,7 +384,7 @@ func (l *Log) truncate(index uint64, term uint64) error {
 
 // Appends a series of entries to the log.
 func (l *Log) appendEntries(entries []pb.LogEntry) error {
-	if l.levelDB == nil {
+	if l.file == nil {
 		return errors.New("log is not open")
 	}
 
@@ -398,78 +395,57 @@ func (l *Log) appendEntries(entries []pb.LogEntry) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
-	// 开启事务
-	tx, err := l.levelDB.OpenTransaction()
-	if err != nil {
-		panic(err)
-	}
-	defer tx.Discard()
+	startPosition, _ := l.file.Seek(0, os.SEEK_CUR)
+	w := bufio.NewWriter(l.file)
 
-	// 批量写
+	var size int64
+	var err error
+
 	for _, entry := range entries {
-		indexBytes := uint64ToBytes(entry.Index)
-		data, _ := entry.Marshal()
-		if err = tx.Put(indexBytes, data, nil); err != nil {
-			panic(err)
+		l.positions = append(l.positions, startPosition)
+		if size, err = l.writeEntry(&entry, w); err != nil {
+			return err
 		}
+		startPosition += size
 	}
 
-	lastEntryIndexBytes := uint64ToBytes(entries[len(entries)-1].Index)
-	err = tx.Put([]byte(lastEntryIndex), lastEntryIndexBytes, nil)
-	if err != nil {
+	if err = w.Flush(); err != nil {
 		panic(err)
 	}
 
-	// 执行事务
-	if err = tx.Commit(); err != nil {
+	if err = l.file.Sync(); err != nil {
 		panic(err)
 	}
-
-	l.entries = append(l.entries, entries...)
 
 	return nil
 }
 
-func (l *Log) writeEntry(entry *pb.LogEntry) error {
-	if l.levelDB == nil {
-		return errors.New("log is not open")
+func (l *Log) writeEntry(entry *pb.LogEntry, w *bufio.Writer) (int64, error) {
+	if l.file == nil {
+		return -1, errors.New("log is not open")
 	}
 
 	// Make sure the term and index are greater than the previous.
 	if len(l.entries) > 0 {
 		lastEntry := l.entries[len(l.entries)-1]
 		if entry.Term < lastEntry.Term {
-			return fmt.Errorf("cannot append Entry with earlier term (%x:%x <= %x:%x)",
+			return -1, fmt.Errorf("cannot append Entry with earlier term (%x:%x <= %x:%x)",
 				entry.Term, entry.Index, lastEntry.Term, lastEntry.Index)
 		} else if entry.Term == lastEntry.Term && entry.Index <= lastEntry.Index {
-			return fmt.Errorf("cannot append Entry with earlier index in the same term (%x:%x <= %x:%x)",
+			return -1, fmt.Errorf("cannot append Entry with earlier index in the same term (%x:%x <= %x:%x)",
 				entry.Term, entry.Index, lastEntry.Term, lastEntry.Index)
 		}
 	}
 
-	indexBytes := uint64ToBytes(entry.Index)
-	data, _ := entry.Marshal()
-
-	// 开启事务
-	tx, err := l.levelDB.OpenTransaction()
+	size, err := l.encodeLogEntry(w, entry)
 	if err != nil {
-		return fmt.Errorf("open transaction error: %v", err)
-	}
-	defer tx.Discard()
-
-	_ = tx.Put([]byte(lastEntryIndex), indexBytes, nil)
-	_ = tx.Put(indexBytes, data, nil)
-
-	// 执行事务
-	if err = tx.Commit(); err != nil {
-		log.Warnf("commit transaction error: %v", err)
-		return err
+		return -1, err
 	}
 
 	// Append to entries list if stored on disk.
 	l.entries = append(l.entries, *entry)
 
-	return nil
+	return int64(size), nil
 }
 
 // compact 清除index之前的日志条目，起到压缩的目的
@@ -490,37 +466,78 @@ func (l *Log) compact(index, term uint64) error {
 	}
 
 	newFilePath := l.path + ".new"
-	levelDB, err := leveldb.OpenFile(newFilePath, nil)
+	file, err := os.OpenFile(newFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
 
-	for _, entry := range entries {
-		data, _ := entry.Marshal()
-		err = levelDB.Put(uint64ToBytes(entry.Index), data, nil)
-		if err != nil {
-			_ = levelDB.Close()
+	w := bufio.NewWriter(file)
+	positions := make([]int64, len(entries))
+	for i, entry := range entries {
+		positions[i], _ = l.file.Seek(0, os.SEEK_CUR)
+
+		if _, err = l.encodeLogEntry(w, &entry); err != nil {
+			_ = file.Close()
 			_ = os.Remove(newFilePath)
 			return err
 		}
 	}
-
-	if err = levelDB.Close(); err != nil {
-		_ = os.Remove(newFilePath)
-		return err
-	}
-	if err = os.Rename(newFilePath, l.path); err != nil {
-		_ = os.Remove(newFilePath)
-		return err
-	}
-	if err = l.levelDB.Close(); err != nil {
+	if err = w.Flush(); err != nil {
+		_ = file.Close()
 		_ = os.Remove(newFilePath)
 		return err
 	}
 
-	l.levelDB, _ = leveldb.OpenFile(l.path, nil)
+	oldFile := l.file
+
+	err = os.Rename(newFilePath, l.path)
+	if err != nil {
+		_ = file.Close()
+		_ = os.Remove(newFilePath)
+		return err
+	}
+	l.file = file
+
+	_ = oldFile.Close()
+
 	l.entries = entries
+	l.positions = positions
 	l.startIndex = index
 	l.startTerm = term
 	return nil
+}
+
+func (l *Log) encodeLogEntry(w io.Writer, e *pb.LogEntry) (int, error) {
+	b, err := e.Marshal()
+	if err != nil {
+		return -1, err
+	}
+
+	if _, err = fmt.Fprintf(w, "%8x\n", len(b)); err != nil {
+		return -1, err
+	}
+
+	return w.Write(b)
+}
+
+func (l *Log) decodeLogEntry(r io.Reader, e *pb.LogEntry) (int, error) {
+	var length int = 0
+
+	_, err := fmt.Fscanf(r, "%8x\n", &length)
+	if err != nil {
+		return -1, err
+	}
+
+	data := make([]byte, length)
+
+	_, err = io.ReadFull(r, data)
+	if err != nil {
+		return -1, err
+	}
+
+	if err = e.Unmarshal(data); err != nil {
+		return -1, err
+	}
+
+	return length + 8 + 1, nil
 }

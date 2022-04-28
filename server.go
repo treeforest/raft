@@ -25,6 +25,7 @@ var (
 
 type server struct {
 	grpcServer            *grpc.Server                // grpc server
+	currentTerm           uint64                      // 当前任期
 	locker                sync.RWMutex                // 读写锁
 	config                *Config                     // 配置文件
 	stateMachine          StateMachine                // 状态机
@@ -125,12 +126,14 @@ func (s *server) Init() error {
 		return fmt.Errorf("open log failed: %v", err)
 	}
 
+	_, s.currentTerm = s.log.lastInfo()
+
 	s.state = pb.NodeState_Initialized
 	return nil
 }
 
 func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (*pb.RequestVoteResponse, error) {
-	log.Info("RequestVote")
+	log.Debug("RequestVote")
 
 	if req.Term < s.CurrentTerm() {
 		return &pb.RequestVoteResponse{Term: s.CurrentTerm(), VoteGranted: false}, nil
@@ -138,7 +141,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.RequestVoteRequest) (*
 
 	if req.Term > s.CurrentTerm() {
 		// 任期比对方小，成为跟随者
-		log.Debugf("req.Term > s.CurrentTerm()")
+		log.Debugf("req.CurrentTerm > s.CurrentTerm()")
 		s.updateCurrentTerm(req.Term, 0)
 	} else if atomic.LoadUint64(&s.votedFor) != 0 && atomic.LoadUint64(&s.votedFor) != req.CandidateId {
 		// 已投过票，且投票对象不是req.CandidateId
@@ -219,7 +222,7 @@ func (s *server) Do(commandName string, command []byte) <-chan error {
 		cmd := s.cmdPool.Get().(*Command)
 		cmd.name = commandName
 		cmd.data = command
-		cmd.c = make(chan uint64, 1)
+		cmd.errCh = make(chan error, 1)
 
 		defer func() {
 			cmd.name = ""
@@ -246,23 +249,13 @@ func (s *server) Do(commandName string, command []byte) <-chan error {
 			}()
 		}
 
-		var index uint64
 		select {
 		case <-s.stopped:
 			done <- StopError
 			return
-		case index = <-cmd.c:
+		case err := <-cmd.errCh:
+			done <- err
 		}
-
-		if index == 0 {
-			done <- errors.New("execute error")
-			return
-		}
-
-		sub := s.log.Subscribe(index, s.config.SubscribeTTL)
-		_, err := sub.Listen()
-
-		done <- err
 	}()
 
 	return done
@@ -330,7 +323,8 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendEntriesRequest
 		}, nil
 	}
 
-	log.Debugf("append entries: (prevLogIndex:%d entries:%d, currentIndex:%d)", req.PrevLogIndex, len(req.Entries), s.CurrentIndex())
+	log.Debugf("append entries: (prevLogIndex:%d entries:%d)",
+		req.PrevLogIndex, len(req.Entries))
 
 	if err := s.log.setCommitIndex(req.CommitIndex); err != nil {
 		log.Warn(err)
@@ -374,7 +368,7 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 		log.Fatal("cannot recover from previous state")
 	}
 
-	s.log.SetCurrentTerm(req.LastTerm)
+	s.currentTerm = req.LastTerm
 	s.log.updateCommitIndex(req.LastIndex)
 
 	// add member
@@ -523,15 +517,6 @@ func (s *server) LeaderAddress() string {
 	}
 }
 
-// CurrentTerm 获取的当前任期
-func (s *server) CurrentTerm() uint64 {
-	return s.log.CurrentTerm()
-}
-
-func (s *server) CurrentIndex() uint64 {
-	return s.log.CurrentIndex()
-}
-
 // Running 是否是运行状态
 func (s *server) Running() bool {
 	s.locker.RLock()
@@ -582,7 +567,7 @@ func (s *server) updateCurrentTerm(term uint64, leaderId uint64) {
 	s.locker.Lock()
 	defer s.locker.Unlock()
 
-	s.log.SetCurrentTerm(term)
+	s.currentTerm = term
 	s.leaderId = leaderId
 	s.votedFor = 0
 }
@@ -649,14 +634,14 @@ func (s *server) candidateLoop() {
 	for s.State() == pb.NodeState_Candidate {
 		if doVote {
 			// 任期加一
-			currentTerm := s.log.SetNextTerm()
+			s.currentTerm++
 
 			// 自己的选票投给自己
 			s.votedFor = s.ID()
 
 			respChan = make(chan *pb.RequestVoteResponse, s.MemberCount())
 			req := &pb.RequestVoteRequest{
-				Term:         currentTerm,
+				Term:         s.currentTerm,
 				CandidateId:  s.ID(),
 				LastLogTerm:  lastLogTerm,
 				LastLogIndex: lastLogIndex,
@@ -697,7 +682,7 @@ func (s *server) candidateLoop() {
 				break
 			}
 			if resp.Term > s.CurrentTerm() {
-				log.Debug("resp.Term > s.CurrentTerm")
+				log.Debug("resp.CurrentTerm > s.CurrentTerm")
 				s.updateCurrentTerm(resp.Term, 0)
 			} else {
 				// 节点拒绝了对当前节点的投票
@@ -759,13 +744,18 @@ func (s *server) leaderLoop() {
 				CommandName: cmd.name,
 				Command:     cmd.data,
 			}
-			cmd.c <- entry.Index
 
-			if err := s.log.writeEntry(entry); err != nil {
-				cmd.c <- 0
+			if err := s.log.appendEntries([]pb.LogEntry{*entry}); err != nil {
+				cmd.errCh <- errors.New("write entry error")
 				log.Error("write entry error: ", err)
 				break
 			}
+
+			sub := s.log.Subscribe(entry.Index, s.config.SubscribeTTL)
+			go func(cmd *Command) {
+				_, err := sub.Listen()
+				cmd.errCh <- err
+			}(cmd)
 
 			if s.config.ReplicationType == Asynchronous || s.MemberCount() == 1 {
 				// 异步复制或集群中只有一个节点，leader直接提交日志，并返回结果
@@ -773,9 +763,9 @@ func (s *server) leaderLoop() {
 			}
 
 		case resp := <-s.leaderRespChan:
-			if resp.Term > s.CurrentTerm() {
+			if resp.Term > s.currentTerm {
 				// 主动退位
-				log.Debug("resp.Term > s.CurrentTerm(), change from leader to follower")
+				log.Debug("resp.CurrentTerm > s.CurrentTerm(), change from leader to follower")
 				s.updateCurrentTerm(resp.Term, 0)
 				break
 			}
@@ -944,6 +934,12 @@ func (s *server) QuorumSize() int {
 
 func (s *server) Self() pb.Member {
 	return pb.Member{Id: s.ID(), Address: s.Address()}
+}
+
+func (s *server) CurrentTerm() uint64 {
+	s.locker.RLock()
+	defer s.locker.RUnlock()
+	return s.currentTerm
 }
 
 // snapshotPath 快照路径

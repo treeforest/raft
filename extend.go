@@ -6,3 +6,7 @@ type AppendEntriesResponse struct {
 	*pb.AppendEntriesResponse
 	Id uint64
 }
+
+type LogEntry struct {
+	*pb.LogEntry
+}

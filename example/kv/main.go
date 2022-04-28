@@ -11,6 +11,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,6 +34,7 @@ type Server struct {
 	state  map[string]string
 	locker sync.RWMutex
 	pool   *sync.Pool
+	ch     chan *Command
 }
 
 func New() *Server {
@@ -44,6 +46,7 @@ func New() *Server {
 				return new(Command)
 			},
 		},
+		ch: make(chan *Command, 1024),
 	}
 }
 
@@ -63,8 +66,13 @@ func (s *Server) Recovery(state []byte) error {
 
 // Apply 状态机执行命令的回调函数
 func (s *Server) Apply(commandName string, command []byte) {
+	//
+}
+
+func (s *Server) handle(commandName string, command []byte) {
 	cmd := s.pool.Get().(*Command)
 	_ = json.Unmarshal(command, cmd)
+
 	// log.Debugf("commandName:%s key:%s value:%s", commandName, cmd.Key, cmd.Value)
 	switch commandName {
 	case SET:
@@ -83,8 +91,21 @@ func (s *Server) Serve(addr string) {
 		cmd.Value = "world"
 		data, _ := json.Marshal(cmd)
 
-		n := 1000
+		n := 10000
 		succ := int32(0)
+		errCh := make(chan error, 100)
+		done := make(chan struct{}, 1)
+		go func() {
+			for {
+				select {
+				case err := <-errCh:
+					log.Error(err)
+				case <-done:
+					return
+				}
+			}
+		}()
+
 		wg := sync.WaitGroup{}
 		wg.Add(n)
 		since := time.Now()
@@ -94,11 +115,14 @@ func (s *Server) Serve(addr string) {
 				err := <-s.peer.Do(SET, data)
 				if err == nil {
 					atomic.AddInt32(&succ, 1)
+				} else {
+					errCh <- err
 				}
 			}()
 		}
 		wg.Wait()
 		used := time.Now().Sub(since).Milliseconds()
+		done <- struct{}{}
 
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
@@ -123,7 +147,6 @@ func (s *Server) Serve(addr string) {
 			return
 		}
 
-		log.Infof("currentIndex=%d", s.peer.CurrentIndex())
 		c.JSON(http.StatusOK, gin.H{"code": 0})
 	})
 	r.POST("/del", func(c *gin.Context) {
@@ -180,7 +203,7 @@ func main() {
 	config := raft.DefaultConfig()
 	config.MemberId = uint64(*port)
 	config.Address = fmt.Sprintf("localhost:%d", *port)
-	config.LogPath = fmt.Sprintf("%d", *port)
+	config.LogPath = filepath.Join(".", "log", fmt.Sprintf("%d.rdb", *port))
 	config.URL = `http://` + *addr
 
 	peer := raft.New(config, s)

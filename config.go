@@ -61,10 +61,10 @@ func DefaultConfig() *Config {
 	return &Config{
 		MemberId:                        uint64(snowflake.Generate()),
 		Address:                         "localhost:4399",
-		MaxLogEntriesPerRequest:         200,
+		MaxLogEntriesPerRequest:         400,
 		NumberOfLogEntriesAfterSnapshot: 200,
-		HeartbeatInterval:               time.Millisecond * 150,
-		HeartbeatTimeout:                time.Millisecond * 1500,
+		HeartbeatInterval:               time.Millisecond * 100,
+		HeartbeatTimeout:                time.Millisecond * 1000,
 		ElectionTimeout:                 time.Millisecond * 1000,
 		DialTimeout:                     time.Millisecond * 1000,
 		DialOptions: []grpc.DialOption{
