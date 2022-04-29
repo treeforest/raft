@@ -55,6 +55,13 @@ type Config struct {
 
 	// ReplicationType 日志复制类型
 	ReplicationType ReplicationType
+
+	// LogWriteType 日志写磁盘的方式。包括同步写写磁盘；异步写磁盘。
+	// 如果是异步写磁盘，则需要填写
+	WriteType LogWriteType
+
+	// LogWriteTimeInterval 异步写磁盘的时间间隔
+	LogWriteTimeInterval time.Duration
 }
 
 func DefaultConfig() *Config {
@@ -73,9 +80,11 @@ func DefaultConfig() *Config {
 		ServerOptions: []grpc.ServerOption{
 			grpc.Creds(insecure.NewCredentials()),
 		},
-		SnapshotPath:    ".",
-		LogPath:         "./log",
-		SubscribeTTL:    time.Second * 3,
-		ReplicationType: Synchronous,
+		SnapshotPath:         ".",
+		LogPath:              "./log",
+		SubscribeTTL:         time.Second * 3,
+		ReplicationType:      Synchronous,
+		WriteType:            Async,
+		LogWriteTimeInterval: time.Second,
 	}
 }

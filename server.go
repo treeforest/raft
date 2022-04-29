@@ -57,7 +57,7 @@ func New(config *Config, stateMachine StateMachine) Raft {
 		pendingSnapshot:       nil,
 		snapshot:              nil,
 		votedFor:              0,
-		log:                   newLog(config.LogPath, stateMachine.Apply),
+		log:                   newLog(config.WriteType, config.LogWriteTimeInterval, stateMachine.Apply),
 		memberMgr:             newMemberManager(),
 		stopped:               make(chan struct{}, 1),
 		routineGroup:          sync.WaitGroup{},

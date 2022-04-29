@@ -20,35 +20,69 @@ commitIndex(16字节) + /n: commitIndex
 	data(长度为length)
 */
 
-type notify []<-chan struct{}
+type LogWriteType int
+
+const (
+	// Sync 同步写
+	Sync LogWriteType = iota
+	// Async 异步写
+	Async
+	// Auto 由操作系统自动将缓存写到磁盘。当缓存写满了之后，操作系统自动写到磁盘。
+	Auto
+)
 
 // Log a log is a collection of log entries that are persisted to durable storage.
 type Log struct {
-	ApplyFunc   func(commandName string, command []byte)
-	mutex       sync.RWMutex
-	file        *os.File
-	path        string
-	entries     []pb.LogEntry
-	positions   []int64 // 日志条目的位置
-	commitIndex uint64
-	startIndex  uint64 // the index before the first Entry in the Log entries
-	startTerm   uint64
-	initialized bool
-	ps          *PubSub
+	ApplyFunc         func(commandName string, command []byte)
+	flushTimeInterval time.Duration // 将文件缓冲区的日志刷新到磁盘的时间间隔
+	writeType         LogWriteType  // 0：同步写；1：异步写；
+	mutex             sync.RWMutex
+	file              *os.File
+	w                 *bufio.Writer
+	path              string
+	entries           []pb.LogEntry
+	positions         []int64 // 日志条目的位置
+	commitIndex       uint64
+	startIndex        uint64 // the index before the first Entry in the Log entries
+	startTerm         uint64
+	initialized       bool
+	ps                *PubSub
+	stop              chan struct{}
 }
 
 // newLog creates a new log.
-func newLog(path string, applyFunc func(string, []byte)) *Log {
+func newLog(wt LogWriteType, fti time.Duration, applyFunc func(string, []byte)) *Log {
 	l := &Log{
-		ApplyFunc:   applyFunc,
-		entries:     make([]pb.LogEntry, 0),
-		positions:   make([]int64, 0),
-		startIndex:  0,
-		startTerm:   0,
-		initialized: false,
-		ps:          NewPubSub(),
+		ApplyFunc:         applyFunc,
+		flushTimeInterval: fti,
+		writeType:         wt,
+		entries:           make([]pb.LogEntry, 0, 1024*1024),
+		positions:         make([]int64, 0, 1024*1024),
+		startIndex:        0,
+		startTerm:         0,
+		initialized:       false,
+		ps:                NewPubSub(),
 	}
 	return l
+}
+
+func (l *Log) asyncFlush() {
+	t := time.NewTicker(l.flushTimeInterval)
+	for {
+		select {
+		case <-l.stop:
+			return
+		case <-t.C:
+			select {
+			case <-l.stop:
+				return
+			default:
+				if err := l.file.Sync(); err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
 }
 
 func (l *Log) Subscribe(index uint64, ttl time.Duration) Subscription {
@@ -117,11 +151,21 @@ func (l *Log) open(path string) error {
 			if err == nil {
 				// step over commit index
 				_, _ = l.file.Seek(16+1, os.SEEK_SET)
+				l.w = bufio.NewWriter(l.file)
 				l.initialized = true
+
+				if l.writeType == Async {
+					go l.asyncFlush()
+				}
 			}
 			return err
 		}
 		return err
+	}
+
+	l.w = bufio.NewWriter(l.file)
+	if l.writeType == Async {
+		go l.asyncFlush()
 	}
 
 	r := bufio.NewReader(l.file)
@@ -178,6 +222,10 @@ func (l *Log) open(path string) error {
 func (l *Log) close() {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
+
+	l.stop <- struct{}{}
+
+	_ = l.file.Sync()
 
 	if l.file != nil {
 		_ = l.file.Close()
@@ -395,25 +443,26 @@ func (l *Log) appendEntries(entries []pb.LogEntry) error {
 	defer l.mutex.Unlock()
 
 	startPosition, _ := l.file.Seek(0, os.SEEK_CUR)
-	w := bufio.NewWriter(l.file)
 
 	var size int64
 	var err error
 
 	for _, entry := range entries {
 		l.positions = append(l.positions, startPosition)
-		if size, err = l.writeEntry(&entry, w); err != nil {
+		if size, err = l.writeEntry(&entry, l.w); err != nil {
 			return err
 		}
 		startPosition += size
 	}
 
-	if err = w.Flush(); err != nil {
+	if err = l.w.Flush(); err != nil {
 		panic(err)
 	}
 
-	if err = l.file.Sync(); err != nil {
-		panic(err)
+	if l.writeType == Sync {
+		if err = l.file.Sync(); err != nil {
+			panic(err)
+		}
 	}
 
 	return nil
@@ -486,6 +535,11 @@ func (l *Log) compact(index, term uint64) error {
 		_ = os.Remove(newFilePath)
 		return err
 	}
+	if err = file.Sync(); err != nil {
+		_ = file.Close()
+		_ = os.Remove(newFilePath)
+		return err
+	}
 
 	oldFile := l.file
 
@@ -496,6 +550,7 @@ func (l *Log) compact(index, term uint64) error {
 		return err
 	}
 	l.file = file
+	l.w = w
 
 	_ = oldFile.Close()
 
