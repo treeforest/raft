@@ -289,17 +289,16 @@ func (s *server) SnapshotRecovery(ctx context.Context, req *pb.SnapshotRecoveryR
 // Membership 成员信息,由leader->follower
 func (s *server) Membership(ctx context.Context, req *pb.MembershipRequest) (*pb.MembershipResponse, error) {
 	log.Debug("Membership")
-	for _, m := range req.Members {
-		if m.Id == s.ID() {
-			continue
+	switch s.State() {
+	case pb.NodeState_Follower:
+		resp, err := s.send(req)
+		if err != nil {
+			return &pb.MembershipResponse{}, err
 		}
-		if s.members.Exist(m.Id) {
-			continue
-		}
-		s.members.Store(newMember(m, s))
-		log.Infof("add member %d %s", m.Id, m.Address)
+		return resp.(*pb.MembershipResponse), nil
+	default:
+		return &pb.MembershipResponse{}, NotFollowerError
 	}
-	return &pb.MembershipResponse{Success: true}, nil
 }
 
 // AddMember 添加成员，只能由leader完成
@@ -535,6 +534,20 @@ func (s *server) processRequestVoteResponse(resp *pb.RequestVoteResponse) bool {
 	return false
 }
 
+func (s *server) processMembership(req *pb.MembershipRequest) (*pb.MembershipResponse, bool) {
+	for _, m := range req.Members {
+		if m.Id == s.ID() {
+			continue
+		}
+		if s.members.Exist(m.Id) {
+			continue
+		}
+		s.members.Store(newMember(m, s))
+		log.Infof("add member %d %s", m.Id, m.Address)
+	}
+	return &pb.MembershipResponse{Success: true}, true
+}
+
 func (s *server) processAddMemberRequest(req *pb.AddMemberRequest) (*pb.AddMemberResponse, bool) {
 	if !s.IsLeader() && !req.Leader {
 		return &pb.AddMemberResponse{
@@ -767,6 +780,8 @@ func (s *server) followerLoop() {
 				e.retValue, update = s.processAppendEntriesRequest(msg)
 			case *pb.RequestVoteRequest:
 				e.retValue, update = s.processRequestVoteRequest(msg)
+			case *pb.MembershipRequest:
+				e.retValue, update = s.processMembership(msg)
 			case *pb.AddMemberRequest:
 				e.retValue, update = s.processAddMemberRequest(msg)
 			case *pb.RemoveMemberRequest:
