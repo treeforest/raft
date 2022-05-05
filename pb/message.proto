@@ -29,10 +29,10 @@ service Raft {
   rpc Membership(MembershipRequest) returns (MembershipResponse){}
 
   // AddMember 添加成员
-  rpc AddMember(MemberRequest) returns (MemberResponse){}
+  rpc AddMember(AddMemberRequest) returns (AddMemberResponse){}
 
   // RemoveMember 删除成员
-  rpc RemoveMember(MemberRequest) returns (MemberResponse){}
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse){}
 
   // Ping 探测节点状态
   rpc Ping(Empty) returns (Empty) {}
@@ -162,12 +162,22 @@ message MembershipResponse {
   bool success = 1;
 }
 
-message MemberRequest {
+message AddMemberRequest {
   bool leader = 1;
   Member member = 2 [(gogoproto.nullable) = false];
 }
 
-message MemberResponse {
+message AddMemberResponse {
+  bool success = 1;
+  Member leader = 2 [(gogoproto.nullable) = false];
+}
+
+message RemoveMemberRequest {
+  bool leader = 1;
+  Member member = 2 [(gogoproto.nullable) = false];
+}
+
+message RemoveMemberResponse {
   bool success = 1;
   Member leader = 2 [(gogoproto.nullable) = false];
 }

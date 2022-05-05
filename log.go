@@ -17,7 +17,7 @@ import (
 commitIndex(16字节) + /n: commitIndex
 日志条目：
 	length(8字节) + /n
-	data(长度为length)
+	target(长度为length)
 */
 
 type LogWriteType int
@@ -78,7 +78,7 @@ func (l *Log) asyncFlush() {
 				return
 			default:
 				if err := l.file.Sync(); err != nil {
-					panic(err)
+					panic(any(err))
 				}
 			}
 		}
@@ -267,7 +267,7 @@ func (l *Log) getEntriesAfter(index uint64, maxLogEntriesPerRequest uint64) ([]p
 
 	// Return an error if the index doesn't exist.
 	if index > (uint64(len(l.entries)) + l.startIndex) {
-		panic(fmt.Sprintf("index is beyond end of log: %v %v", len(l.entries), index))
+		panic(any(fmt.Sprintf("index is beyond end of log: %v %v", len(l.entries), index)))
 	}
 
 	// If we're going from the beginning of the log then return the whole log.
@@ -456,12 +456,12 @@ func (l *Log) appendEntries(entries []pb.LogEntry) error {
 	}
 
 	if err = l.w.Flush(); err != nil {
-		panic(err)
+		panic(any(err))
 	}
 
 	if l.writeType == Sync {
 		if err = l.file.Sync(); err != nil {
-			panic(err)
+			panic(any(err))
 		}
 	}
 

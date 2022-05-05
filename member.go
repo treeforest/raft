@@ -70,7 +70,7 @@ func (m *member) sendAppendEntriesRequest(req *pb.AppendEntriesRequest) error {
 
 	resp, err := client.AppendEntries(context.Background(), req)
 	if err != nil {
-		return fmt.Errorf("send AppendEntries error: %v", err)
+		return err
 	}
 
 	m.setLastActivity(time.Now())
@@ -104,7 +104,7 @@ func (m *member) sendAppendEntriesRequest(req *pb.AppendEntriesRequest) error {
 	m.Unlock()
 
 	// 通知server处理AppendEntriesResponse
-	m.server.leaderRespChan <- &AppendEntriesResponse{AppendEntriesResponse: resp, Id: m.Id}
+	m.server.sendAsync(&AppendEntriesResponse{AppendEntriesResponse: resp, Id: m.Id})
 
 	return nil
 }
@@ -182,7 +182,7 @@ func (m *member) sendSnapshotRecoveryRequest(snapshot *pb.Snapshot) error {
 	return nil
 }
 
-func (m *member) sendAddMemberRequest(req *pb.MemberRequest) error {
+func (m *member) sendAddMemberRequest(req *pb.AddMemberRequest) error {
 	client, err := m.client()
 	if err != nil {
 		return err
@@ -196,7 +196,7 @@ func (m *member) sendAddMemberRequest(req *pb.MemberRequest) error {
 	return err
 }
 
-func (m *member) sendRemoveMemberRequest(req *pb.MemberRequest) error {
+func (m *member) sendRemoveMemberRequest(req *pb.RemoveMemberRequest) error {
 	client, err := m.client()
 	if err != nil {
 		return err
@@ -264,34 +264,41 @@ func (m *member) heartbeat() {
 			log.Infof("stop heartbeat with %d", m.Id)
 			atomic.SwapInt32(&m.state, 2)
 			return
+
 		case <-ticker.C:
 			if atomic.LoadInt32(&m.state) != 0 {
 				break
 			}
 			if err := m.flush(); err != nil {
-				log.Warnf("flush failed: %d", m.Id)
+				log.Warnf("flush failed, (id:%d, err:%v)", m.Id, err)
 
-				// 暂停心跳
-				ticker.Stop()
+				if err == StopError {
+					m.server.locker.Lock()
+					m.server.removeMember(m.Id)
+					m.server.locker.Unlock()
+				} else {
+					// 暂停心跳
+					ticker.Stop()
 
-				// 心跳失败, 尝试重连3次
-				var i = 0
-				for i < 3 {
-					if err = m.dial(); err == nil {
+					// 心跳失败, 尝试重连3次
+					var i = 0
+					for i < 3 {
+						if err = m.dial(); err == nil {
+							break
+						}
+						i++
+					}
+					if i == 3 {
+						// 移除节点,不需要return，在RemoveMember方法里会向stop通道传值
+						m.setCC(nil)
+						m.server.removeMember(m.Id)
+						atomic.SwapInt32(&m.state, 1)
 						break
 					}
-					i++
-				}
-				if i == 3 {
-					// 移除节点,不需要return，在RemoveMember方法里会向stop通道传值
-					m.setCC(nil)
-					m.server.removeMember(m.Id)
-					atomic.SwapInt32(&m.state, 1)
-					break
-				}
 
-				// 恢复心跳
-				ticker.Reset(m.server.config.HeartbeatInterval)
+					// 恢复心跳
+					ticker.Reset(m.server.config.HeartbeatInterval)
+				}
 			}
 		}
 	}

@@ -592,7 +592,7 @@ func (m *MembershipResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MembershipResponse proto.InternalMessageInfo
 
-type MemberRequest struct {
+type AddMemberRequest struct {
 	Leader               bool     `protobuf:"varint,1,opt,name=leader,proto3" json:"leader,omitempty"`
 	Member               Member   `protobuf:"bytes,2,opt,name=member,proto3" json:"member"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -600,18 +600,18 @@ type MemberRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *MemberRequest) Reset()         { *m = MemberRequest{} }
-func (m *MemberRequest) String() string { return proto.CompactTextString(m) }
-func (*MemberRequest) ProtoMessage()    {}
-func (*MemberRequest) Descriptor() ([]byte, []int) {
+func (m *AddMemberRequest) Reset()         { *m = AddMemberRequest{} }
+func (m *AddMemberRequest) String() string { return proto.CompactTextString(m) }
+func (*AddMemberRequest) ProtoMessage()    {}
+func (*AddMemberRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{12}
 }
-func (m *MemberRequest) XXX_Unmarshal(b []byte) error {
+func (m *AddMemberRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MemberRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddMemberRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MemberRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_AddMemberRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -621,19 +621,19 @@ func (m *MemberRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (m *MemberRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MemberRequest.Merge(m, src)
+func (m *AddMemberRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddMemberRequest.Merge(m, src)
 }
-func (m *MemberRequest) XXX_Size() int {
+func (m *AddMemberRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *MemberRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_MemberRequest.DiscardUnknown(m)
+func (m *AddMemberRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddMemberRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MemberRequest proto.InternalMessageInfo
+var xxx_messageInfo_AddMemberRequest proto.InternalMessageInfo
 
-type MemberResponse struct {
+type AddMemberResponse struct {
 	Success              bool     `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Leader               Member   `protobuf:"bytes,2,opt,name=leader,proto3" json:"leader"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -641,18 +641,18 @@ type MemberResponse struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *MemberResponse) Reset()         { *m = MemberResponse{} }
-func (m *MemberResponse) String() string { return proto.CompactTextString(m) }
-func (*MemberResponse) ProtoMessage()    {}
-func (*MemberResponse) Descriptor() ([]byte, []int) {
+func (m *AddMemberResponse) Reset()         { *m = AddMemberResponse{} }
+func (m *AddMemberResponse) String() string { return proto.CompactTextString(m) }
+func (*AddMemberResponse) ProtoMessage()    {}
+func (*AddMemberResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_33c57e4bae7b9afd, []int{13}
 }
-func (m *MemberResponse) XXX_Unmarshal(b []byte) error {
+func (m *AddMemberResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *MemberResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *AddMemberResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_MemberResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_AddMemberResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -662,17 +662,99 @@ func (m *MemberResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return b[:n], nil
 	}
 }
-func (m *MemberResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_MemberResponse.Merge(m, src)
+func (m *AddMemberResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddMemberResponse.Merge(m, src)
 }
-func (m *MemberResponse) XXX_Size() int {
+func (m *AddMemberResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *MemberResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_MemberResponse.DiscardUnknown(m)
+func (m *AddMemberResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddMemberResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_MemberResponse proto.InternalMessageInfo
+var xxx_messageInfo_AddMemberResponse proto.InternalMessageInfo
+
+type RemoveMemberRequest struct {
+	Leader               bool     `protobuf:"varint,1,opt,name=leader,proto3" json:"leader,omitempty"`
+	Member               Member   `protobuf:"bytes,2,opt,name=member,proto3" json:"member"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RemoveMemberRequest) Reset()         { *m = RemoveMemberRequest{} }
+func (m *RemoveMemberRequest) String() string { return proto.CompactTextString(m) }
+func (*RemoveMemberRequest) ProtoMessage()    {}
+func (*RemoveMemberRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{14}
+}
+func (m *RemoveMemberRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RemoveMemberRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RemoveMemberRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RemoveMemberRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RemoveMemberRequest.Merge(m, src)
+}
+func (m *RemoveMemberRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *RemoveMemberRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_RemoveMemberRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RemoveMemberRequest proto.InternalMessageInfo
+
+type RemoveMemberResponse struct {
+	Success              bool     `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Leader               Member   `protobuf:"bytes,2,opt,name=leader,proto3" json:"leader"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RemoveMemberResponse) Reset()         { *m = RemoveMemberResponse{} }
+func (m *RemoveMemberResponse) String() string { return proto.CompactTextString(m) }
+func (*RemoveMemberResponse) ProtoMessage()    {}
+func (*RemoveMemberResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33c57e4bae7b9afd, []int{15}
+}
+func (m *RemoveMemberResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RemoveMemberResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RemoveMemberResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RemoveMemberResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RemoveMemberResponse.Merge(m, src)
+}
+func (m *RemoveMemberResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *RemoveMemberResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_RemoveMemberResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RemoveMemberResponse proto.InternalMessageInfo
 
 type Empty struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -684,7 +766,7 @@ func (m *Empty) Reset()         { *m = Empty{} }
 func (m *Empty) String() string { return proto.CompactTextString(m) }
 func (*Empty) ProtoMessage()    {}
 func (*Empty) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{14}
+	return fileDescriptor_33c57e4bae7b9afd, []int{16}
 }
 func (m *Empty) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -728,7 +810,7 @@ func (m *Snapshot) Reset()         { *m = Snapshot{} }
 func (m *Snapshot) String() string { return proto.CompactTextString(m) }
 func (*Snapshot) ProtoMessage()    {}
 func (*Snapshot) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33c57e4bae7b9afd, []int{15}
+	return fileDescriptor_33c57e4bae7b9afd, []int{17}
 }
 func (m *Snapshot) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -771,8 +853,10 @@ func init() {
 	proto.RegisterType((*Member)(nil), "Member")
 	proto.RegisterType((*MembershipRequest)(nil), "MembershipRequest")
 	proto.RegisterType((*MembershipResponse)(nil), "MembershipResponse")
-	proto.RegisterType((*MemberRequest)(nil), "MemberRequest")
-	proto.RegisterType((*MemberResponse)(nil), "MemberResponse")
+	proto.RegisterType((*AddMemberRequest)(nil), "AddMemberRequest")
+	proto.RegisterType((*AddMemberResponse)(nil), "AddMemberResponse")
+	proto.RegisterType((*RemoveMemberRequest)(nil), "RemoveMemberRequest")
+	proto.RegisterType((*RemoveMemberResponse)(nil), "RemoveMemberResponse")
 	proto.RegisterType((*Empty)(nil), "Empty")
 	proto.RegisterType((*Snapshot)(nil), "Snapshot")
 }
@@ -780,60 +864,62 @@ func init() {
 func init() { proto.RegisterFile("message.proto", fileDescriptor_33c57e4bae7b9afd) }
 
 var fileDescriptor_33c57e4bae7b9afd = []byte{
-	// 840 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x8e, 0xe3, 0x44,
-	0x10, 0x76, 0x3b, 0xce, 0x5f, 0x25, 0xd9, 0x35, 0x9d, 0xec, 0x62, 0x2c, 0x64, 0x46, 0x2d, 0x01,
-	0x0b, 0x87, 0x5e, 0x31, 0x1c, 0x90, 0x80, 0x03, 0xb3, 0x68, 0x41, 0x11, 0xc3, 0x08, 0x3c, 0x88,
-	0x03, 0x37, 0x4f, 0xba, 0xc9, 0x7a, 0x89, 0xdd, 0xc6, 0xee, 0x0d, 0x0c, 0x12, 0x27, 0x5e, 0x80,
-	0x23, 0x8f, 0xc0, 0x89, 0x77, 0xe0, 0x36, 0x47, 0xae, 0x5c, 0xd0, 0x4e, 0x78, 0x01, 0x1e, 0x01,
-	0xb9, 0xed, 0xce, 0xb4, 0x93, 0x4c, 0x66, 0x2e, 0x7b, 0x8a, 0xab, 0xba, 0xbb, 0xea, 0xfb, 0xbe,
-	0xaa, 0xae, 0x0e, 0x8c, 0x12, 0x5e, 0x14, 0xd1, 0x9c, 0xd3, 0x2c, 0x17, 0x52, 0xf8, 0x93, 0xb9,
-	0x98, 0x0b, 0xf5, 0xf9, 0xb0, 0xfc, 0xaa, 0xbc, 0xe4, 0x57, 0x04, 0x38, 0xe4, 0xdf, 0x3f, 0xe3,
-	0x85, 0xfc, 0x5a, 0x48, 0x5e, 0x7f, 0x62, 0x0c, 0x8e, 0xe4, 0x79, 0xe2, 0xa1, 0x03, 0xf4, 0xc0,
-	0x09, 0xd5, 0x37, 0x3e, 0x80, 0xc1, 0x2c, 0x4a, 0x59, 0xcc, 0x22, 0xc9, 0xa7, 0xcc, 0xb3, 0xd5,
-	0x92, 0xe9, 0x2a, 0x77, 0x2c, 0xa2, 0x42, 0x1e, 0x8b, 0xf9, 0x57, 0xe5, 0xe1, 0x56, 0xb5, 0xc3,
-	0x70, 0x61, 0x02, 0xc3, 0xda, 0x9c, 0xa6, 0x8c, 0xff, 0xe8, 0x39, 0x6a, 0x4b, 0xc3, 0x47, 0x3e,
-	0x83, 0x71, 0x03, 0x51, 0x91, 0x89, 0xb4, 0xe0, 0xd7, 0x41, 0x5a, 0x0a, 0xc9, 0x3f, 0xcd, 0xa3,
-	0x54, 0xf2, 0x0a, 0x52, 0x2f, 0x34, 0x5d, 0x24, 0x83, 0xde, 0xb1, 0x98, 0x3f, 0x4e, 0x65, 0x7e,
-	0x8e, 0x27, 0xd0, 0x8e, 0x55, 0xd6, 0x2a, 0x44, 0x65, 0xac, 0xe3, 0xda, 0x1b, 0x54, 0x45, 0x92,
-	0x44, 0x29, 0x3b, 0x89, 0x12, 0xae, 0x88, 0xf4, 0x43, 0xd3, 0x85, 0x3d, 0xe8, 0xd6, 0xa6, 0xe2,
-	0x30, 0x0c, 0xb5, 0x49, 0xfe, 0x46, 0x30, 0x39, 0xca, 0x32, 0x9e, 0xb2, 0x32, 0x6b, 0xcc, 0x8b,
-	0x7d, 0x9a, 0xfa, 0xd0, 0x5b, 0xf0, 0x88, 0xf1, 0x7c, 0x2d, 0xe8, 0xda, 0x2e, 0x41, 0x64, 0x39,
-	0x5f, 0x6e, 0xa8, 0x69, 0xb8, 0x4a, 0x35, 0x6b, 0xb3, 0xa1, 0xa6, 0xe9, 0xd3, 0x54, 0x62, 0x59,
-	0x6d, 0x69, 0xd7, 0x55, 0xbb, 0x72, 0xe1, 0xb7, 0xa0, 0xcb, 0x2b, 0xa4, 0x5e, 0xe7, 0xa0, 0xf5,
-	0x60, 0x70, 0xd8, 0xa7, 0x5a, 0xb2, 0x47, 0xce, 0xc5, 0x3f, 0xaf, 0x59, 0xa1, 0x5e, 0x27, 0x3f,
-	0xc3, 0xbd, 0x0d, 0x6a, 0x7b, 0x8a, 0xb3, 0x96, 0xdb, 0x36, 0xe5, 0xde, 0xc0, 0xd3, 0xda, 0xc6,
-	0xe3, 0x41, 0xb7, 0x78, 0x36, 0x9b, 0xf1, 0xa2, 0x50, 0x84, 0x7a, 0xa1, 0x36, 0xc9, 0x53, 0xc0,
-	0xa7, 0x69, 0x94, 0x15, 0x4f, 0x84, 0x3c, 0x2a, 0xbe, 0xd3, 0xba, 0x9a, 0x1a, 0xa2, 0x0d, 0x0d,
-	0x5f, 0x85, 0x7e, 0xd9, 0x5b, 0x53, 0x03, 0xc7, 0x95, 0x43, 0x9d, 0x8c, 0x0a, 0x69, 0xc8, 0xbb,
-	0xb6, 0xc9, 0x43, 0x18, 0x37, 0x72, 0xd5, 0x44, 0x0d, 0x70, 0xa8, 0x09, 0xee, 0x0f, 0x04, 0x2f,
-	0xeb, 0x13, 0x21, 0x9f, 0x89, 0x25, 0xcf, 0xcf, 0x5f, 0x28, 0x44, 0xfc, 0x26, 0x74, 0x13, 0x9e,
-	0x9c, 0xf1, 0xbc, 0x14, 0xaa, 0x2c, 0x5c, 0x97, 0x7e, 0xae, 0x6c, 0x5d, 0xb6, 0x7a, 0xb5, 0xac,
-	0x44, 0x21, 0x23, 0xc9, 0x55, 0xf5, 0x87, 0x61, 0x65, 0x90, 0xa7, 0xe0, 0x6d, 0xe3, 0xdd, 0x53,
-	0x4f, 0x83, 0xba, 0xdd, 0xa0, 0x7e, 0x73, 0x4d, 0xc9, 0x21, 0x74, 0x2a, 0x68, 0xf8, 0x0e, 0xd8,
-	0xb1, 0x16, 0xc1, 0x8e, 0x59, 0x19, 0x35, 0x62, 0x2c, 0xd7, 0x51, 0xfb, 0xa1, 0x36, 0xc9, 0x87,
-	0xf0, 0x52, 0x75, 0xa6, 0x78, 0x12, 0x67, 0x5a, 0x49, 0x83, 0x33, 0xda, 0xc7, 0x99, 0x50, 0xc0,
-	0xe6, 0xe9, 0x1b, 0xcb, 0x77, 0x02, 0xa3, 0x6a, 0xbf, 0xce, 0x74, 0x1f, 0x3a, 0x55, 0x8d, 0xea,
-	0x9d, 0xb5, 0x85, 0x5f, 0x87, 0x4e, 0x95, 0x43, 0xe1, 0xdd, 0x02, 0x50, 0x2f, 0x92, 0x2f, 0xe1,
-	0x8e, 0x8e, 0x77, 0x53, 0xee, 0x32, 0x64, 0x9d, 0x6a, 0x77, 0xc8, 0x6a, 0x91, 0x74, 0xa1, 0xfd,
-	0x38, 0xc9, 0xe4, 0x39, 0xf9, 0x05, 0x41, 0x4f, 0x97, 0xae, 0xd9, 0x3f, 0x68, 0x5f, 0xff, 0xd8,
-	0x1b, 0xfd, 0xb3, 0x6e, 0x8b, 0x96, 0xd1, 0x16, 0xb7, 0xee, 0xaa, 0xb7, 0x19, 0xf4, 0x4f, 0x04,
-	0xe3, 0xa7, 0xea, 0xd4, 0x00, 0xba, 0xa7, 0x52, 0x64, 0x19, 0x67, 0xae, 0x85, 0xef, 0xc2, 0x60,
-	0x9a, 0xc6, 0x32, 0x8e, 0x16, 0xf1, 0x4f, 0x9c, 0xb9, 0x08, 0x03, 0x74, 0x8e, 0x15, 0x07, 0xd7,
-	0xc6, 0x43, 0xe8, 0x7d, 0x22, 0x16, 0x0b, 0xf1, 0x03, 0xcf, 0xdd, 0x16, 0x1e, 0x41, 0xff, 0x63,
-	0xfd, 0x82, 0xb8, 0x0e, 0x76, 0x61, 0xa8, 0x89, 0xc9, 0x38, 0x9d, 0xbb, 0xed, 0xc3, 0x3f, 0x5b,
-	0xe0, 0x84, 0xd1, 0xb7, 0x12, 0xbf, 0x0f, 0x03, 0xe3, 0x59, 0xc0, 0x63, 0xba, 0xfd, 0x6c, 0xf9,
-	0x13, 0xba, 0xe3, 0xe5, 0x20, 0x16, 0xfe, 0x08, 0x46, 0x8d, 0xb9, 0x85, 0xef, 0xd1, 0x5d, 0x23,
-	0xda, 0xbf, 0x4f, 0x77, 0x8e, 0x37, 0x62, 0x95, 0xd9, 0x8d, 0x71, 0x80, 0xc7, 0x74, 0x7b, 0x10,
-	0xf9, 0x13, 0xba, 0x63, 0x62, 0x10, 0x0b, 0x4f, 0xc1, 0xdd, 0xbc, 0x68, 0xd8, 0xa3, 0xd7, 0xcc,
-	0x0a, 0xff, 0x15, 0x7a, 0xdd, 0xad, 0x24, 0x16, 0x7e, 0x0f, 0xe0, 0xaa, 0xab, 0x31, 0xa6, 0x5b,
-	0x17, 0xc4, 0x1f, 0xd3, 0xed, 0xb6, 0x27, 0x16, 0xa6, 0xd0, 0x3f, 0x62, 0x4c, 0xdf, 0x41, 0xda,
-	0x68, 0x75, 0xff, 0x2e, 0x6d, 0xb6, 0x2a, 0xb1, 0xf0, 0x3b, 0x30, 0x0c, 0x79, 0x22, 0x96, 0xfc,
-	0xf6, 0x47, 0x3c, 0x70, 0xbe, 0x88, 0xd3, 0x39, 0xee, 0x50, 0xd5, 0xa5, 0x7e, 0xfd, 0x4b, 0xac,
-	0x47, 0x6f, 0x5c, 0x5c, 0x06, 0xd6, 0xf3, 0xcb, 0x00, 0xfd, 0x77, 0x19, 0xa0, 0xdf, 0x57, 0x01,
-	0xba, 0x58, 0x05, 0xe8, 0xaf, 0x55, 0x80, 0x9e, 0xaf, 0x02, 0xf4, 0xdb, 0xbf, 0x81, 0xf5, 0x8d,
-	0x43, 0x3f, 0xc8, 0xce, 0xce, 0x3a, 0xea, 0x3f, 0xc9, 0xbb, 0xff, 0x07, 0x00, 0x00, 0xff, 0xff,
-	0xdb, 0xa9, 0x94, 0x64, 0xba, 0x08, 0x00, 0x00,
+	// 868 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x56, 0xcd, 0x6e, 0x23, 0x45,
+	0x10, 0x9e, 0xb6, 0x1d, 0xff, 0x94, 0x1d, 0x98, 0x94, 0x9d, 0x65, 0x18, 0x21, 0x13, 0xb5, 0x04,
+	0x2c, 0x1c, 0x7a, 0xa5, 0x80, 0x84, 0xc4, 0x8f, 0x44, 0x16, 0x2d, 0xc8, 0x22, 0xac, 0x60, 0x12,
+	0x81, 0xc4, 0x6d, 0x92, 0x6e, 0xbc, 0xb3, 0x78, 0xa6, 0x87, 0x99, 0xde, 0x40, 0x90, 0x38, 0xf1,
+	0x02, 0x1c, 0x79, 0x04, 0x4e, 0x3c, 0x47, 0x8e, 0x48, 0x9c, 0xb8, 0xa0, 0x4d, 0x78, 0x01, 0x1e,
+	0x01, 0x4d, 0xcf, 0xb4, 0xd3, 0xe3, 0x71, 0x1c, 0x0e, 0xcb, 0xc9, 0x53, 0xd5, 0x5d, 0x55, 0x5f,
+	0x7d, 0xf5, 0xd3, 0x86, 0xed, 0x58, 0xe4, 0x79, 0x38, 0x17, 0x2c, 0xcd, 0xa4, 0x92, 0xfe, 0x64,
+	0x2e, 0xe7, 0x52, 0x7f, 0xde, 0x2b, 0xbe, 0x4a, 0x2d, 0xfd, 0x99, 0x00, 0x06, 0xe2, 0xdb, 0x27,
+	0x22, 0x57, 0x5f, 0x48, 0x25, 0xaa, 0x4f, 0x44, 0xe8, 0x28, 0x91, 0xc5, 0x1e, 0xd9, 0x23, 0x77,
+	0x3b, 0x81, 0xfe, 0xc6, 0x3d, 0x18, 0x9e, 0x86, 0x09, 0x8f, 0x78, 0xa8, 0xc4, 0x8c, 0x7b, 0x2d,
+	0x7d, 0x64, 0xab, 0x8a, 0x1b, 0x8b, 0x30, 0x57, 0x87, 0x72, 0x7e, 0x5c, 0x18, 0xb7, 0xcb, 0x1b,
+	0x96, 0x0a, 0x29, 0x8c, 0x2a, 0x71, 0x96, 0x70, 0xf1, 0xbd, 0xd7, 0xd1, 0x57, 0x6a, 0x3a, 0xfa,
+	0x09, 0x8c, 0x6b, 0x88, 0xf2, 0x54, 0x26, 0xb9, 0xb8, 0x09, 0xd2, 0x99, 0x54, 0xe2, 0xe3, 0x2c,
+	0x4c, 0x94, 0x28, 0x21, 0xf5, 0x03, 0x5b, 0x45, 0x53, 0xe8, 0x1f, 0xca, 0xf9, 0x83, 0x44, 0x65,
+	0xe7, 0x38, 0x81, 0xad, 0x48, 0x47, 0x2d, 0x5d, 0x94, 0xc2, 0xd2, 0x6f, 0x6b, 0x25, 0x55, 0x19,
+	0xc7, 0x61, 0xc2, 0x1f, 0x86, 0xb1, 0xd0, 0x89, 0x0c, 0x02, 0x5b, 0x85, 0x1e, 0xf4, 0x2a, 0x51,
+	0xe7, 0x30, 0x0a, 0x8c, 0x48, 0xff, 0x24, 0x30, 0x39, 0x48, 0x53, 0x91, 0xf0, 0x22, 0x6a, 0x24,
+	0xf2, 0x4d, 0x9c, 0xfa, 0xd0, 0x5f, 0x88, 0x90, 0x8b, 0x6c, 0x49, 0xe8, 0x52, 0x2e, 0x40, 0xa4,
+	0x99, 0x38, 0x5b, 0x61, 0xd3, 0x52, 0x15, 0x6c, 0x56, 0x62, 0x8d, 0x4d, 0x5b, 0x67, 0x52, 0x89,
+	0x54, 0x79, 0x65, 0xab, 0xaa, 0xda, 0xb5, 0x0a, 0x5f, 0x87, 0x9e, 0x28, 0x91, 0x7a, 0xdd, 0xbd,
+	0xf6, 0xdd, 0xe1, 0xfe, 0x80, 0x19, 0xca, 0xee, 0x77, 0x2e, 0xfe, 0x7a, 0xd9, 0x09, 0xcc, 0x39,
+	0xfd, 0x11, 0x76, 0x57, 0x52, 0xdb, 0x50, 0x9c, 0x25, 0xdd, 0x2d, 0x9b, 0xee, 0x15, 0x3c, 0xed,
+	0x26, 0x1e, 0x0f, 0x7a, 0xf9, 0x93, 0xd3, 0x53, 0x91, 0xe7, 0x3a, 0xa1, 0x7e, 0x60, 0x44, 0xfa,
+	0x18, 0xf0, 0x28, 0x09, 0xd3, 0xfc, 0x91, 0x54, 0x07, 0xf9, 0x37, 0x86, 0x57, 0x9b, 0x43, 0xb2,
+	0xc2, 0xe1, 0x4b, 0x30, 0x28, 0x7a, 0x6b, 0x66, 0xe1, 0xb8, 0x56, 0x68, 0xcb, 0x30, 0x57, 0x16,
+	0xbd, 0x4b, 0x99, 0xde, 0x83, 0x71, 0x2d, 0x56, 0x95, 0xa8, 0x05, 0x8e, 0xd4, 0xc1, 0xfd, 0x46,
+	0xe0, 0x05, 0x63, 0x11, 0x88, 0x53, 0x79, 0x26, 0xb2, 0xf3, 0xff, 0x15, 0x22, 0xbe, 0x06, 0xbd,
+	0x58, 0xc4, 0x27, 0x22, 0x2b, 0x88, 0x2a, 0x0a, 0xd7, 0x63, 0x9f, 0x6a, 0xd9, 0x94, 0xad, 0x3a,
+	0x2d, 0x2a, 0x91, 0xab, 0x50, 0x09, 0x5d, 0xfd, 0x51, 0x50, 0x0a, 0xf4, 0x31, 0x78, 0x4d, 0xbc,
+	0x1b, 0xea, 0x69, 0xa5, 0xde, 0xaa, 0xa5, 0x7e, 0x7b, 0x4d, 0xe9, 0x3e, 0x74, 0x4b, 0x68, 0xf8,
+	0x1c, 0xb4, 0x22, 0x43, 0x42, 0x2b, 0xe2, 0x85, 0xd7, 0x90, 0xf3, 0xcc, 0x78, 0x1d, 0x04, 0x46,
+	0xa4, 0xef, 0xc1, 0x4e, 0x69, 0x93, 0x3f, 0x8a, 0x52, 0xc3, 0xa4, 0x95, 0x33, 0xd9, 0x94, 0x33,
+	0x65, 0x80, 0xb6, 0xf5, 0xad, 0xe5, 0xfb, 0x1c, 0xdc, 0x03, 0xce, 0x4b, 0x13, 0x13, 0xec, 0x0e,
+	0x74, 0xcb, 0x32, 0x55, 0x97, 0x2b, 0x09, 0x5f, 0x81, 0x6e, 0x19, 0x46, 0x43, 0x6e, 0x60, 0xa8,
+	0x0e, 0xe9, 0x31, 0xec, 0x58, 0x2e, 0x6f, 0x43, 0x50, 0x78, 0xad, 0xa2, 0xad, 0xf7, 0x5a, 0x1e,
+	0xd2, 0xe3, 0x62, 0x3d, 0xc6, 0xf2, 0x4c, 0x3c, 0x53, 0xac, 0x5f, 0xc2, 0xa4, 0xee, 0xf5, 0x59,
+	0xc1, 0xed, 0xc1, 0xd6, 0x83, 0x38, 0x55, 0xe7, 0xf4, 0x27, 0x02, 0x7d, 0xd3, 0x6f, 0xf5, 0xa6,
+	0x27, 0x9b, 0x9a, 0xbe, 0xb5, 0xd2, 0xf4, 0xcb, 0x5e, 0x6e, 0x5b, 0xbd, 0xfc, 0x9f, 0x47, 0xe1,
+	0x0d, 0x0e, 0x83, 0x87, 0x92, 0x8b, 0x23, 0x6d, 0x35, 0x84, 0xde, 0x91, 0x92, 0x69, 0x2a, 0xb8,
+	0xeb, 0xe0, 0xf3, 0x30, 0x9c, 0x25, 0x91, 0x8a, 0xc2, 0x45, 0xf4, 0x83, 0xe0, 0x2e, 0x41, 0x80,
+	0xee, 0xa1, 0xce, 0xc1, 0x6d, 0xe1, 0x08, 0xfa, 0x1f, 0xc9, 0xc5, 0x42, 0x7e, 0x27, 0x32, 0xb7,
+	0x8d, 0xdb, 0x30, 0xf8, 0xd0, 0x3c, 0x7b, 0x6e, 0x07, 0x5d, 0x18, 0x99, 0xc4, 0x54, 0x94, 0xcc,
+	0xdd, 0xad, 0xfd, 0x3f, 0xda, 0xd0, 0x09, 0xc2, 0xaf, 0x15, 0xbe, 0x03, 0x43, 0xeb, 0x2d, 0xc3,
+	0x31, 0x6b, 0xbe, 0xb5, 0xfe, 0x84, 0xad, 0x79, 0xee, 0xa8, 0x83, 0x1f, 0xc0, 0x76, 0x6d, 0xd9,
+	0xe2, 0x2e, 0x5b, 0xf7, 0xae, 0xf8, 0x77, 0xd8, 0xda, 0x9d, 0x4c, 0x9d, 0x22, 0xba, 0xb5, 0xc3,
+	0x70, 0xcc, 0x9a, 0xdb, 0xd3, 0x9f, 0xb0, 0x35, 0x6b, 0x8e, 0x3a, 0x38, 0x03, 0x77, 0x75, 0x3b,
+	0xa0, 0xc7, 0x6e, 0x58, 0x70, 0xfe, 0x8b, 0xec, 0xa6, 0x55, 0x42, 0x1d, 0x7c, 0x1b, 0xe0, 0x7a,
+	0x14, 0x11, 0x59, 0x63, 0xaa, 0xfd, 0x31, 0x6b, 0xce, 0x2a, 0x75, 0xf0, 0x2d, 0x18, 0x2c, 0x07,
+	0x08, 0x77, 0xd8, 0xea, 0x7c, 0xfa, 0xc8, 0x1a, 0xf3, 0x45, 0x1d, 0x7c, 0x1f, 0x46, 0x76, 0x2b,
+	0x63, 0xc1, 0x6f, 0x63, 0x5e, 0xfc, 0x5d, 0xb6, 0xae, 0xdf, 0xa9, 0x83, 0x1e, 0x74, 0x3e, 0x8b,
+	0x92, 0x39, 0x76, 0x99, 0xee, 0x5b, 0xbf, 0xfa, 0xa5, 0xce, 0xfd, 0x57, 0x2f, 0x2e, 0xa7, 0xce,
+	0xd3, 0xcb, 0x29, 0xf9, 0xe7, 0x72, 0x4a, 0x7e, 0xbd, 0x9a, 0x92, 0x8b, 0xab, 0x29, 0xf9, 0xfd,
+	0x6a, 0x4a, 0x9e, 0x5e, 0x4d, 0xc9, 0x2f, 0x7f, 0x4f, 0x9d, 0xaf, 0x3a, 0xec, 0xdd, 0xf4, 0xe4,
+	0xa4, 0xab, 0xff, 0x5a, 0xbd, 0xf9, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xa1, 0x20, 0xff, 0xea,
+	0x81, 0x09, 0x00, 0x00,
 }
 
 func (this *RequestVoteRequest) VerboseEqual(that interface{}) error {
@@ -862,7 +948,7 @@ func (this *RequestVoteRequest) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *RequestVoteRequest but is not nil && this == nil")
 	}
 	if this.Term != that1.Term {
-		return fmt.Errorf("CurrentTerm this(%v) Not Equal that(%v)", this.Term, that1.Term)
+		return fmt.Errorf("Term this(%v) Not Equal that(%v)", this.Term, that1.Term)
 	}
 	if this.CandidateId != that1.CandidateId {
 		return fmt.Errorf("CandidateId this(%v) Not Equal that(%v)", this.CandidateId, that1.CandidateId)
@@ -940,7 +1026,7 @@ func (this *RequestVoteResponse) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *RequestVoteResponse but is not nil && this == nil")
 	}
 	if this.Term != that1.Term {
-		return fmt.Errorf("CurrentTerm this(%v) Not Equal that(%v)", this.Term, that1.Term)
+		return fmt.Errorf("Term this(%v) Not Equal that(%v)", this.Term, that1.Term)
 	}
 	if this.VoteGranted != that1.VoteGranted {
 		return fmt.Errorf("VoteGranted this(%v) Not Equal that(%v)", this.VoteGranted, that1.VoteGranted)
@@ -1009,7 +1095,7 @@ func (this *LogEntry) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("Index this(%v) Not Equal that(%v)", this.Index, that1.Index)
 	}
 	if this.Term != that1.Term {
-		return fmt.Errorf("CurrentTerm this(%v) Not Equal that(%v)", this.Term, that1.Term)
+		return fmt.Errorf("Term this(%v) Not Equal that(%v)", this.Term, that1.Term)
 	}
 	if this.CommandName != that1.CommandName {
 		return fmt.Errorf("CommandName this(%v) Not Equal that(%v)", this.CommandName, that1.CommandName)
@@ -1084,7 +1170,7 @@ func (this *AppendEntriesRequest) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *AppendEntriesRequest but is not nil && this == nil")
 	}
 	if this.Term != that1.Term {
-		return fmt.Errorf("CurrentTerm this(%v) Not Equal that(%v)", this.Term, that1.Term)
+		return fmt.Errorf("Term this(%v) Not Equal that(%v)", this.Term, that1.Term)
 	}
 	if this.LeaderId != that1.LeaderId {
 		return fmt.Errorf("LeaderId this(%v) Not Equal that(%v)", this.LeaderId, that1.LeaderId)
@@ -1184,7 +1270,7 @@ func (this *AppendEntriesResponse) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *AppendEntriesResponse but is not nil && this == nil")
 	}
 	if this.Term != that1.Term {
-		return fmt.Errorf("CurrentTerm this(%v) Not Equal that(%v)", this.Term, that1.Term)
+		return fmt.Errorf("Term this(%v) Not Equal that(%v)", this.Term, that1.Term)
 	}
 	if this.Index != that1.Index {
 		return fmt.Errorf("Index this(%v) Not Equal that(%v)", this.Index, that1.Index)
@@ -1488,7 +1574,7 @@ func (this *SnapshotRecoveryResponse) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that is type *SnapshotRecoveryResponse but is not nil && this == nil")
 	}
 	if this.Term != that1.Term {
-		return fmt.Errorf("CurrentTerm this(%v) Not Equal that(%v)", this.Term, that1.Term)
+		return fmt.Errorf("Term this(%v) Not Equal that(%v)", this.Term, that1.Term)
 	}
 	if this.Success != that1.Success {
 		return fmt.Errorf("Success this(%v) Not Equal that(%v)", this.Success, that1.Success)
@@ -1730,7 +1816,7 @@ func (this *MembershipResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *MemberRequest) VerboseEqual(that interface{}) error {
+func (this *AddMemberRequest) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -1738,22 +1824,22 @@ func (this *MemberRequest) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*MemberRequest)
+	that1, ok := that.(*AddMemberRequest)
 	if !ok {
-		that2, ok := that.(MemberRequest)
+		that2, ok := that.(AddMemberRequest)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *MemberRequest")
+			return fmt.Errorf("that is not of type *AddMemberRequest")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *MemberRequest but is nil && this != nil")
+		return fmt.Errorf("that is type *AddMemberRequest but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *MemberRequest but is not nil && this == nil")
+		return fmt.Errorf("that is type *AddMemberRequest but is not nil && this == nil")
 	}
 	if this.Leader != that1.Leader {
 		return fmt.Errorf("Leader this(%v) Not Equal that(%v)", this.Leader, that1.Leader)
@@ -1766,14 +1852,14 @@ func (this *MemberRequest) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
-func (this *MemberRequest) Equal(that interface{}) bool {
+func (this *AddMemberRequest) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*MemberRequest)
+	that1, ok := that.(*AddMemberRequest)
 	if !ok {
-		that2, ok := that.(MemberRequest)
+		that2, ok := that.(AddMemberRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1796,7 +1882,7 @@ func (this *MemberRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *MemberResponse) VerboseEqual(that interface{}) error {
+func (this *AddMemberResponse) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -1804,22 +1890,22 @@ func (this *MemberResponse) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*MemberResponse)
+	that1, ok := that.(*AddMemberResponse)
 	if !ok {
-		that2, ok := that.(MemberResponse)
+		that2, ok := that.(AddMemberResponse)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *MemberResponse")
+			return fmt.Errorf("that is not of type *AddMemberResponse")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *MemberResponse but is nil && this != nil")
+		return fmt.Errorf("that is type *AddMemberResponse but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *MemberResponse but is not nil && this == nil")
+		return fmt.Errorf("that is type *AddMemberResponse but is not nil && this == nil")
 	}
 	if this.Success != that1.Success {
 		return fmt.Errorf("Success this(%v) Not Equal that(%v)", this.Success, that1.Success)
@@ -1832,14 +1918,146 @@ func (this *MemberResponse) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
-func (this *MemberResponse) Equal(that interface{}) bool {
+func (this *AddMemberResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*MemberResponse)
+	that1, ok := that.(*AddMemberResponse)
 	if !ok {
-		that2, ok := that.(MemberResponse)
+		that2, ok := that.(AddMemberResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Success != that1.Success {
+		return false
+	}
+	if !this.Leader.Equal(&that1.Leader) {
+		return false
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return false
+	}
+	return true
+}
+func (this *RemoveMemberRequest) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*RemoveMemberRequest)
+	if !ok {
+		that2, ok := that.(RemoveMemberRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return fmt.Errorf("that is not of type *RemoveMemberRequest")
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *RemoveMemberRequest but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *RemoveMemberRequest but is not nil && this == nil")
+	}
+	if this.Leader != that1.Leader {
+		return fmt.Errorf("Leader this(%v) Not Equal that(%v)", this.Leader, that1.Leader)
+	}
+	if !this.Member.Equal(&that1.Member) {
+		return fmt.Errorf("Member this(%v) Not Equal that(%v)", this.Member, that1.Member)
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
+	}
+	return nil
+}
+func (this *RemoveMemberRequest) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*RemoveMemberRequest)
+	if !ok {
+		that2, ok := that.(RemoveMemberRequest)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Leader != that1.Leader {
+		return false
+	}
+	if !this.Member.Equal(&that1.Member) {
+		return false
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return false
+	}
+	return true
+}
+func (this *RemoveMemberResponse) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*RemoveMemberResponse)
+	if !ok {
+		that2, ok := that.(RemoveMemberResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return fmt.Errorf("that is not of type *RemoveMemberResponse")
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *RemoveMemberResponse but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *RemoveMemberResponse but is not nil && this == nil")
+	}
+	if this.Success != that1.Success {
+		return fmt.Errorf("Success this(%v) Not Equal that(%v)", this.Success, that1.Success)
+	}
+	if !this.Leader.Equal(&that1.Leader) {
+		return fmt.Errorf("Leader this(%v) Not Equal that(%v)", this.Leader, that1.Leader)
+	}
+	if !bytes.Equal(this.XXX_unrecognized, that1.XXX_unrecognized) {
+		return fmt.Errorf("XXX_unrecognized this(%v) Not Equal that(%v)", this.XXX_unrecognized, that1.XXX_unrecognized)
+	}
+	return nil
+}
+func (this *RemoveMemberResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*RemoveMemberResponse)
+	if !ok {
+		that2, ok := that.(RemoveMemberResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -2010,7 +2228,7 @@ func (this *RequestVoteRequest) GoString() string {
 	}
 	s := make([]string, 0, 8)
 	s = append(s, "&pb.RequestVoteRequest{")
-	s = append(s, "CurrentTerm: "+fmt.Sprintf("%#v", this.Term)+",\n")
+	s = append(s, "Term: "+fmt.Sprintf("%#v", this.Term)+",\n")
 	s = append(s, "CandidateId: "+fmt.Sprintf("%#v", this.CandidateId)+",\n")
 	s = append(s, "LastLogTerm: "+fmt.Sprintf("%#v", this.LastLogTerm)+",\n")
 	s = append(s, "LastLogIndex: "+fmt.Sprintf("%#v", this.LastLogIndex)+",\n")
@@ -2026,7 +2244,7 @@ func (this *RequestVoteResponse) GoString() string {
 	}
 	s := make([]string, 0, 6)
 	s = append(s, "&pb.RequestVoteResponse{")
-	s = append(s, "CurrentTerm: "+fmt.Sprintf("%#v", this.Term)+",\n")
+	s = append(s, "Term: "+fmt.Sprintf("%#v", this.Term)+",\n")
 	s = append(s, "VoteGranted: "+fmt.Sprintf("%#v", this.VoteGranted)+",\n")
 	if this.XXX_unrecognized != nil {
 		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
@@ -2041,7 +2259,7 @@ func (this *LogEntry) GoString() string {
 	s := make([]string, 0, 8)
 	s = append(s, "&pb.LogEntry{")
 	s = append(s, "Index: "+fmt.Sprintf("%#v", this.Index)+",\n")
-	s = append(s, "CurrentTerm: "+fmt.Sprintf("%#v", this.Term)+",\n")
+	s = append(s, "Term: "+fmt.Sprintf("%#v", this.Term)+",\n")
 	s = append(s, "CommandName: "+fmt.Sprintf("%#v", this.CommandName)+",\n")
 	s = append(s, "Command: "+fmt.Sprintf("%#v", this.Command)+",\n")
 	if this.XXX_unrecognized != nil {
@@ -2056,7 +2274,7 @@ func (this *AppendEntriesRequest) GoString() string {
 	}
 	s := make([]string, 0, 10)
 	s = append(s, "&pb.AppendEntriesRequest{")
-	s = append(s, "CurrentTerm: "+fmt.Sprintf("%#v", this.Term)+",\n")
+	s = append(s, "Term: "+fmt.Sprintf("%#v", this.Term)+",\n")
 	s = append(s, "LeaderId: "+fmt.Sprintf("%#v", this.LeaderId)+",\n")
 	s = append(s, "PrevLogTerm: "+fmt.Sprintf("%#v", this.PrevLogTerm)+",\n")
 	s = append(s, "PrevLogIndex: "+fmt.Sprintf("%#v", this.PrevLogIndex)+",\n")
@@ -2080,7 +2298,7 @@ func (this *AppendEntriesResponse) GoString() string {
 	}
 	s := make([]string, 0, 8)
 	s = append(s, "&pb.AppendEntriesResponse{")
-	s = append(s, "CurrentTerm: "+fmt.Sprintf("%#v", this.Term)+",\n")
+	s = append(s, "Term: "+fmt.Sprintf("%#v", this.Term)+",\n")
 	s = append(s, "Index: "+fmt.Sprintf("%#v", this.Index)+",\n")
 	s = append(s, "CommitIndex: "+fmt.Sprintf("%#v", this.CommitIndex)+",\n")
 	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
@@ -2147,7 +2365,7 @@ func (this *SnapshotRecoveryResponse) GoString() string {
 	}
 	s := make([]string, 0, 7)
 	s = append(s, "&pb.SnapshotRecoveryResponse{")
-	s = append(s, "CurrentTerm: "+fmt.Sprintf("%#v", this.Term)+",\n")
+	s = append(s, "Term: "+fmt.Sprintf("%#v", this.Term)+",\n")
 	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
 	s = append(s, "CommitIndex: "+fmt.Sprintf("%#v", this.CommitIndex)+",\n")
 	if this.XXX_unrecognized != nil {
@@ -2202,12 +2420,12 @@ func (this *MembershipResponse) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *MemberRequest) GoString() string {
+func (this *AddMemberRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&pb.MemberRequest{")
+	s = append(s, "&pb.AddMemberRequest{")
 	s = append(s, "Leader: "+fmt.Sprintf("%#v", this.Leader)+",\n")
 	s = append(s, "Member: "+strings.Replace(this.Member.GoString(), `&`, ``, 1)+",\n")
 	if this.XXX_unrecognized != nil {
@@ -2216,12 +2434,40 @@ func (this *MemberRequest) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *MemberResponse) GoString() string {
+func (this *AddMemberResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&pb.MemberResponse{")
+	s = append(s, "&pb.AddMemberResponse{")
+	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
+	s = append(s, "Leader: "+strings.Replace(this.Leader.GoString(), `&`, ``, 1)+",\n")
+	if this.XXX_unrecognized != nil {
+		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *RemoveMemberRequest) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&pb.RemoveMemberRequest{")
+	s = append(s, "Leader: "+fmt.Sprintf("%#v", this.Leader)+",\n")
+	s = append(s, "Member: "+strings.Replace(this.Member.GoString(), `&`, ``, 1)+",\n")
+	if this.XXX_unrecognized != nil {
+		s = append(s, "XXX_unrecognized:"+fmt.Sprintf("%#v", this.XXX_unrecognized)+",\n")
+	}
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *RemoveMemberResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&pb.RemoveMemberResponse{")
 	s = append(s, "Success: "+fmt.Sprintf("%#v", this.Success)+",\n")
 	s = append(s, "Leader: "+strings.Replace(this.Leader.GoString(), `&`, ``, 1)+",\n")
 	if this.XXX_unrecognized != nil {
@@ -2296,9 +2542,9 @@ type RaftClient interface {
 	// Membership 当前集群中的成员信息
 	Membership(ctx context.Context, in *MembershipRequest, opts ...grpc.CallOption) (*MembershipResponse, error)
 	// AddMember 添加成员
-	AddMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error)
+	AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error)
 	// RemoveMember 删除成员
-	RemoveMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error)
+	RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error)
 	// Ping 探测节点状态
 	Ping(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
@@ -2356,8 +2602,8 @@ func (c *raftClient) Membership(ctx context.Context, in *MembershipRequest, opts
 	return out, nil
 }
 
-func (c *raftClient) AddMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
-	out := new(MemberResponse)
+func (c *raftClient) AddMember(ctx context.Context, in *AddMemberRequest, opts ...grpc.CallOption) (*AddMemberResponse, error) {
+	out := new(AddMemberResponse)
 	err := c.cc.Invoke(ctx, "/Raft/AddMember", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2365,8 +2611,8 @@ func (c *raftClient) AddMember(ctx context.Context, in *MemberRequest, opts ...g
 	return out, nil
 }
 
-func (c *raftClient) RemoveMember(ctx context.Context, in *MemberRequest, opts ...grpc.CallOption) (*MemberResponse, error) {
-	out := new(MemberResponse)
+func (c *raftClient) RemoveMember(ctx context.Context, in *RemoveMemberRequest, opts ...grpc.CallOption) (*RemoveMemberResponse, error) {
+	out := new(RemoveMemberResponse)
 	err := c.cc.Invoke(ctx, "/Raft/RemoveMember", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2396,9 +2642,9 @@ type RaftServer interface {
 	// Membership 当前集群中的成员信息
 	Membership(context.Context, *MembershipRequest) (*MembershipResponse, error)
 	// AddMember 添加成员
-	AddMember(context.Context, *MemberRequest) (*MemberResponse, error)
+	AddMember(context.Context, *AddMemberRequest) (*AddMemberResponse, error)
 	// RemoveMember 删除成员
-	RemoveMember(context.Context, *MemberRequest) (*MemberResponse, error)
+	RemoveMember(context.Context, *RemoveMemberRequest) (*RemoveMemberResponse, error)
 	// Ping 探测节点状态
 	Ping(context.Context, *Empty) (*Empty, error)
 }
@@ -2422,10 +2668,10 @@ func (*UnimplementedRaftServer) SnapshotRecovery(ctx context.Context, req *Snaps
 func (*UnimplementedRaftServer) Membership(ctx context.Context, req *MembershipRequest) (*MembershipResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Membership not implemented")
 }
-func (*UnimplementedRaftServer) AddMember(ctx context.Context, req *MemberRequest) (*MemberResponse, error) {
+func (*UnimplementedRaftServer) AddMember(ctx context.Context, req *AddMemberRequest) (*AddMemberResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddMember not implemented")
 }
-func (*UnimplementedRaftServer) RemoveMember(ctx context.Context, req *MemberRequest) (*MemberResponse, error) {
+func (*UnimplementedRaftServer) RemoveMember(ctx context.Context, req *RemoveMemberRequest) (*RemoveMemberResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveMember not implemented")
 }
 func (*UnimplementedRaftServer) Ping(ctx context.Context, req *Empty) (*Empty, error) {
@@ -2527,7 +2773,7 @@ func _Raft_Membership_Handler(srv interface{}, ctx context.Context, dec func(int
 }
 
 func _Raft_AddMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MemberRequest)
+	in := new(AddMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2539,13 +2785,13 @@ func _Raft_AddMember_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: "/Raft/AddMember",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RaftServer).AddMember(ctx, req.(*MemberRequest))
+		return srv.(RaftServer).AddMember(ctx, req.(*AddMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Raft_RemoveMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MemberRequest)
+	in := new(RemoveMemberRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -2557,7 +2803,7 @@ func _Raft_RemoveMember_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: "/Raft/RemoveMember",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RaftServer).RemoveMember(ctx, req.(*MemberRequest))
+		return srv.(RaftServer).RemoveMember(ctx, req.(*RemoveMemberRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -3185,7 +3431,7 @@ func (m *MembershipResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MemberRequest) Marshal() (dAtA []byte, err error) {
+func (m *AddMemberRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -3195,12 +3441,12 @@ func (m *MemberRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MemberRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *AddMemberRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MemberRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AddMemberRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -3232,7 +3478,7 @@ func (m *MemberRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *MemberResponse) Marshal() (dAtA []byte, err error) {
+func (m *AddMemberResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -3242,12 +3488,106 @@ func (m *MemberResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *MemberResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *AddMemberResponse) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *MemberResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *AddMemberResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	{
+		size, err := m.Leader.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintMessage(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	if m.Success {
+		i--
+		if m.Success {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *RemoveMemberRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RemoveMemberRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RemoveMemberRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	{
+		size, err := m.Member.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintMessage(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	if m.Leader {
+		i--
+		if m.Leader {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *RemoveMemberResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RemoveMemberResponse) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RemoveMemberResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -3640,7 +3980,7 @@ func (m *MembershipResponse) Size() (n int) {
 	return n
 }
 
-func (m *MemberRequest) Size() (n int) {
+func (m *AddMemberRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3657,7 +3997,41 @@ func (m *MemberRequest) Size() (n int) {
 	return n
 }
 
-func (m *MemberResponse) Size() (n int) {
+func (m *AddMemberResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Success {
+		n += 2
+	}
+	l = m.Leader.Size()
+	n += 1 + l + sovMessage(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *RemoveMemberRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Leader {
+		n += 2
+	}
+	l = m.Member.Size()
+	n += 1 + l + sovMessage(uint64(l))
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *RemoveMemberResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -3751,7 +4125,7 @@ func (m *RequestVoteRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentTerm", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Term", wireType)
 			}
 			m.Term = 0
 			for shift := uint(0); ; shift += 7 {
@@ -3878,7 +4252,7 @@ func (m *RequestVoteResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentTerm", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Term", wireType)
 			}
 			m.Term = 0
 			for shift := uint(0); ; shift += 7 {
@@ -3987,7 +4361,7 @@ func (m *LogEntry) Unmarshal(dAtA []byte) error {
 			}
 		case 2:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentTerm", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Term", wireType)
 			}
 			m.Term = 0
 			for shift := uint(0); ; shift += 7 {
@@ -4123,7 +4497,7 @@ func (m *AppendEntriesRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentTerm", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Term", wireType)
 			}
 			m.Term = 0
 			for shift := uint(0); ; shift += 7 {
@@ -4303,7 +4677,7 @@ func (m *AppendEntriesResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentTerm", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Term", wireType)
 			}
 			m.Term = 0
 			for shift := uint(0); ; shift += 7 {
@@ -4786,7 +5160,7 @@ func (m *SnapshotRecoveryResponse) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field CurrentTerm", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Term", wireType)
 			}
 			m.Term = 0
 			for shift := uint(0); ; shift += 7 {
@@ -5122,7 +5496,7 @@ func (m *MembershipResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MemberRequest) Unmarshal(dAtA []byte) error {
+func (m *AddMemberRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -5145,10 +5519,10 @@ func (m *MemberRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MemberRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: AddMemberRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MemberRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: AddMemberRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -5226,7 +5600,7 @@ func (m *MemberRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *MemberResponse) Unmarshal(dAtA []byte) error {
+func (m *AddMemberResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -5249,10 +5623,218 @@ func (m *MemberResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: MemberResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: AddMemberResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: MemberResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: AddMemberResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Success", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Success = bool(v != 0)
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Leader", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMessage
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Leader.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMessage(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RemoveMemberRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMessage
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RemoveMemberRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RemoveMemberRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Leader", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Leader = bool(v != 0)
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Member", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowMessage
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthMessage
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Member.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipMessage(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthMessage
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RemoveMemberResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowMessage
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RemoveMemberResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RemoveMemberResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

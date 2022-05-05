@@ -40,7 +40,7 @@ func New() *Server {
 		state:  map[string]string{},
 		locker: sync.RWMutex{},
 		cmdPool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				return new(Command)
 			},
 		},
@@ -95,7 +95,7 @@ func (s *Server) Serve(addr string) {
 			for {
 				select {
 				case err := <-errCh:
-					log.Error(err)
+					log.Debug(err)
 				case <-done:
 					return
 				}
@@ -190,7 +190,7 @@ func main() {
 	if *openPprof {
 		go func() {
 			if err := http.ListenAndServe(":8080", nil); err != nil {
-				panic(err)
+				panic(any(err))
 			}
 		}()
 	}
