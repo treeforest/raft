@@ -38,14 +38,12 @@ func bytesToUint64(b []byte) (uint64, error) {
 }
 
 func dial(address string, dialTimeout time.Duration, dialOptions []grpc.DialOption) (*grpc.ClientConn, error) {
-	var cc *grpc.ClientConn = nil
 
-	err := timeoutFunc(dialTimeout, func() error {
-		var err error
-		cc, err = grpc.DialContext(context.Background(), address, dialOptions...)
-		return err
-	})
+	dialOptions = append(dialOptions, grpc.WithBlock())
+	ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+	defer cancel()
 
+	cc, err := grpc.DialContext(ctx, address, dialOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("dial %s failed: %v", address, err)
 	}
