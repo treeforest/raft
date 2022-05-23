@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	StopError        = errors.New("state")
-	NotLeaderError   = errors.New("not leader")
-	NotFollowerError = errors.New("not follower")
-	NotSnapshotError = errors.New("not snapshot")
+	StopError        = errors.New("raft: stopped")
+	NotLeaderError   = errors.New("raft: not leader")
+	NotFollowerError = errors.New("raft: not follower")
+	NotSnapshotError = errors.New("raft: not snapshot")
 )
 
 type event struct {
